@@ -17,6 +17,7 @@ import {
 import { createClient } from "@/lib/firebase/client";
 import type { Department, Team, Member } from "@/lib/firebase/types";
 import { notifications } from "@/components/ui/notification-provider";
+import type { AdminAccess } from "@/lib/admin-access";
 
 // Extended types for the nested structure
 type MemberWithTeam = Member;
@@ -30,11 +31,13 @@ export default function DepartmentsPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState("");
+    const [access, setAccess] = useState<AdminAccess | null>(null);
 
     const fetchDepartments = useCallback(async () => {
         setLoading(true);
         setErrorMessage("");
         const firebase = createClient();
+        const profilePromise = fetch("/api/admin/profile", { cache: "no-store" });
 
         // Fetch departments along with related teams and their members
         const { data, error } = await firebase
@@ -47,6 +50,30 @@ export default function DepartmentsPage() {
                 )
             `)
             .order("display_order", { ascending: true });
+
+        const profileResponse = await profilePromise;
+        if (!profileResponse.ok) {
+            setErrorMessage("Your access permissions could not be loaded.");
+            setLoading(false);
+            return;
+        }
+        const profileBody = (await profileResponse.json()) as {
+            profile: {
+                role: AdminAccess["role"];
+                permissions: AdminAccess["permissions"];
+                departmentIds: string[];
+                isPrimary: boolean;
+                isLegacy?: boolean;
+            };
+        };
+        const nextAccess: AdminAccess = {
+            role: profileBody.profile.role,
+            permissions: profileBody.profile.permissions,
+            departmentIds: profileBody.profile.departmentIds,
+            isPrimary: profileBody.profile.isPrimary,
+            isLegacy: profileBody.profile.isLegacy === true,
+        };
+        setAccess(nextAccess);
 
         if (error) {
             setErrorMessage(error.message);
@@ -63,7 +90,11 @@ export default function DepartmentsPage() {
                     })),
             })) as DepartmentWithNested[];
 
-            setDepartments(sortedData);
+            setDepartments(
+                nextAccess.role === "department_head"
+                    ? sortedData.filter((department) => nextAccess.departmentIds.includes(department.id))
+                    : sortedData
+            );
         }
         setLoading(false);
     }, []);
@@ -141,10 +172,12 @@ export default function DepartmentsPage() {
                             {departments.length} departments · Click to expand and manage members
                         </p>
                     </div>
-                    <Link data-tour="dept-add" href="/club-console-alqisc-7q4m-test/admin/departments/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-all shadow-sm self-start sm:self-auto">
-                        <Plus className="w-4 h-4" />
-                        Add Department
-                    </Link>
+                    {access && access.role !== "department_head" && (
+                        <Link data-tour="dept-add" href="/club-console-alqisc-7q4m-test/admin/departments/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-all shadow-sm self-start sm:self-auto">
+                            <Plus className="w-4 h-4" />
+                            Add Department
+                        </Link>
+                    )}
                 </div>
 
                 {loading ? (
@@ -221,16 +254,18 @@ export default function DepartmentsPage() {
                                             </Link>
 
                                             {/* Delete */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowDeleteModal(dept.id);
-                                                }}
-                                                className="p-2 text-[var(--gray)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Delete department"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            {access && access.role !== "department_head" && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowDeleteModal(dept.id);
+                                                    }}
+                                                    className="p-2 text-[var(--gray)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete department"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
 
                                             {/* Expand icon */}
                                             {isExpanded ? (

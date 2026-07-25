@@ -14,6 +14,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/firebase/client";
+import {
+    hasAdminPermission,
+    type AdminAccess,
+    type AdminPermission,
+} from "@/lib/admin-access";
 
 const recentActivity = [
     {
@@ -21,30 +26,35 @@ const recentActivity = [
         detail: "Weekly Islamic Talk — date changed",
         time: "2 min ago",
         type: "event",
+        permission: "events" as AdminPermission,
     },
     {
         action: "New member added",
         detail: "Reka Tatian — Education Department",
         time: "15 min ago",
         type: "member",
+        permission: "departments" as AdminPermission,
     },
     {
         action: "Blog post published",
         detail: "Ramadan Preparation Guide",
         time: "1 hr ago",
         type: "blog",
+        permission: "blog" as AdminPermission,
     },
     {
         action: "Class updated",
         detail: "Arabic Language — schedule changed",
         time: "2 hrs ago",
         type: "class",
+        permission: "classes" as AdminPermission,
     },
     {
         action: "Settings updated",
         detail: "Contact phone number updated",
         time: "3 hrs ago",
         type: "settings",
+        permission: "settings" as AdminPermission,
     },
 ];
 
@@ -57,17 +67,36 @@ export default function DashboardPage() {
     });
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState("");
+    const [access, setAccess] = useState<AdminAccess | null>(null);
 
     useEffect(() => {
         const fetchCounts = async () => {
             try {
                 const firebase = createClient();
-                const results = await Promise.all([
+                const [profileResponse, ...results] = await Promise.all([
+                    fetch("/api/admin/profile", { cache: "no-store" }),
                     firebase.from('departments').select('*', { count: 'exact', head: true }),
                     firebase.from('events').select('*', { count: 'exact', head: true }),
                     firebase.from('classes').select('*', { count: 'exact', head: true }),
                     firebase.from('blog_posts').select('*', { count: 'exact', head: true }),
                 ]);
+                if (!profileResponse.ok) throw new Error("Your access permissions could not be loaded.");
+                const profileBody = (await profileResponse.json()) as {
+                    profile: {
+                        role: AdminAccess["role"];
+                        permissions: AdminPermission[];
+                        departmentIds: string[];
+                        isPrimary: boolean;
+                        isLegacy?: boolean;
+                    };
+                };
+                setAccess({
+                    role: profileBody.profile.role,
+                    permissions: profileBody.profile.permissions,
+                    departmentIds: profileBody.profile.departmentIds,
+                    isPrimary: profileBody.profile.isPrimary,
+                    isLegacy: profileBody.profile.isLegacy === true,
+                });
                 const failed = results.find((result) => result.error)?.error;
                 if (failed) throw failed;
                 setCounts({
@@ -94,6 +123,7 @@ export default function DashboardPage() {
             href: "/club-console-alqisc-7q4m-test/admin/departments",
             color: "bg-[var(--primary)]/5 text-[var(--primary)]",
             iconBg: "bg-[var(--primary)]/10",
+            permission: "departments" as AdminPermission,
         },
         {
             label: "Events",
@@ -102,6 +132,7 @@ export default function DashboardPage() {
             href: "/club-console-alqisc-7q4m-test/admin/events",
             color: "bg-[var(--primary)]/5 text-[var(--primary)]",
             iconBg: "bg-[var(--primary)]/10",
+            permission: "events" as AdminPermission,
         },
         {
             label: "Classes",
@@ -110,6 +141,7 @@ export default function DashboardPage() {
             href: "/club-console-alqisc-7q4m-test/admin/classes",
             color: "bg-[var(--primary)]/5 text-[var(--primary)]",
             iconBg: "bg-[var(--primary)]/10",
+            permission: "classes" as AdminPermission,
         },
         {
             label: "Blog Posts",
@@ -118,6 +150,7 @@ export default function DashboardPage() {
             href: "/club-console-alqisc-7q4m-test/admin/blog",
             color: "bg-[var(--primary)]/5 text-[var(--primary)]",
             iconBg: "bg-[var(--primary)]/10",
+            permission: "blog" as AdminPermission,
         },
     ];
 
@@ -141,7 +174,9 @@ export default function DashboardPage() {
 
                 {/* Stats Grid */}
                 <div data-tour="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-                    {stats.map((stat) => {
+                    {stats.filter((stat) =>
+                        access && hasAdminPermission(access, stat.permission)
+                    ).map((stat) => {
                         const Icon = stat.icon;
                         return (
                             <Link
@@ -179,11 +214,13 @@ export default function DashboardPage() {
                         </h3>
                         <div className="space-y-2">
                             {[
-                                { label: "Add New Event", href: "/club-console-alqisc-7q4m-test/admin/events/new", icon: Calendar },
-                                { label: "Write Blog Post", href: "/club-console-alqisc-7q4m-test/admin/blog/new", icon: FileText },
-                                { label: "Manage Members", href: "/club-console-alqisc-7q4m-test/admin/departments", icon: Users },
-                                { label: "Edit Settings", href: "/club-console-alqisc-7q4m-test/admin/settings", icon: TrendingUp },
-                            ].map((action) => {
+                                { label: "Add New Event", href: "/club-console-alqisc-7q4m-test/admin/events/new", icon: Calendar, permission: "events" as AdminPermission },
+                                { label: "Write Blog Post", href: "/club-console-alqisc-7q4m-test/admin/blog/new", icon: FileText, permission: "blog" as AdminPermission },
+                                { label: "Manage Members", href: "/club-console-alqisc-7q4m-test/admin/departments", icon: Users, permission: "departments" as AdminPermission },
+                                { label: "Edit Settings", href: "/club-console-alqisc-7q4m-test/admin/settings", icon: TrendingUp, permission: "settings" as AdminPermission },
+                            ].filter((action) =>
+                                access && hasAdminPermission(access, action.permission)
+                            ).map((action) => {
                                 const Icon = action.icon;
                                 return (
                                     <Link
@@ -207,7 +244,9 @@ export default function DashboardPage() {
                         </h3>
                         <div className="space-y-3 sm:space-y-4 opacity-50">
                             <p className="text-xs text-center pb-4 text-gray-500">Activity logging features coming soon.</p>
-                            {recentActivity.map((activity, idx) => (
+                            {recentActivity.filter((activity) =>
+                                access && hasAdminPermission(access, activity.permission)
+                            ).map((activity, idx) => (
                                 <div
                                     key={idx}
                                     className="flex items-start gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-gray-50 last:border-0 last:pb-0"

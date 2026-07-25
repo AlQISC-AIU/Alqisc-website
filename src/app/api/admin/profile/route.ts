@@ -1,18 +1,28 @@
 import { NextResponse } from "next/server";
-import { getFirebaseAdminAuth, normalizeAdminEmail, PRIMARY_ADMIN_EMAIL, verifyAdminSession } from "@/lib/firebase/admin";
+import {
+    getFirebaseAdminAuth,
+    normalizeAdminEmail,
+    PRIMARY_ADMIN_EMAIL,
+    verifyAdminContext,
+    verifyAdminSession,
+} from "@/lib/firebase/admin";
 import { sendPasswordSetupEmail } from "@/lib/firebase/auth-email";
 
 export async function GET() {
-    const token = await verifyAdminSession();
-    if (!token?.uid) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    const user = await getFirebaseAdminAuth().getUser(token.uid);
+    const context = await verifyAdminContext();
+    if (!context?.token.uid) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const user = await getFirebaseAdminAuth().getUser(context.token.uid);
     return NextResponse.json({
         profile: {
-            email: user.email || token.email || "",
+            email: user.email || context.token.email || "",
             displayName: user.displayName || "",
             photoUrl: user.photoURL || "",
             providers: user.providerData.map((provider) => provider.providerId),
-            isPrimary: normalizeAdminEmail(user.email || token.email || "") === PRIMARY_ADMIN_EMAIL,
+            isPrimary: normalizeAdminEmail(user.email || context.token.email || "") === PRIMARY_ADMIN_EMAIL,
+            role: context.access.role,
+            permissions: context.access.permissions,
+            departmentIds: context.access.departmentIds,
+            isLegacy: context.access.isLegacy,
         },
     });
 }

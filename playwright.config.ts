@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const testBaseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3101";
+const testPort = new URL(testBaseUrl).port || "3000";
+
 export default defineConfig({
     testDir: "./tests/e2e",
     fullyParallel: false,
@@ -7,7 +10,7 @@ export default defineConfig({
     retries: 0,
     reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
     use: {
-        baseURL: "http://localhost:3101",
+        baseURL: testBaseUrl,
         trace: "retain-on-failure",
         screenshot: "only-on-failure",
         video: "off",
@@ -21,9 +24,9 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: "npm run dev -- --port 3101",
-        url: "http://localhost:3101",
-        reuseExistingServer: false,
+        command: `npm run dev -- --port ${testPort}`,
+        url: testBaseUrl,
+        reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING === "true",
         timeout: 120_000,
     },
 });

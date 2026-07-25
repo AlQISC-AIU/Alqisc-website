@@ -37,8 +37,9 @@ service firebase.storage {
 
     match /images/{folder}/{fileName} {
       allow read: if isAllowedFolder(folder);
-      allow create, update: if isAdmin() && isAllowedFolder(folder) && isValidImage(fileName);
-      allow delete: if isAdmin() && isAllowedFolder(folder);
+      // All writes go through /api/admin/images where role and department
+      // scope are verified server-side. Browser SDK writes are denied.
+      allow create, update, delete: if false;
     }
 
     match /{allPaths=**} {

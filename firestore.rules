@@ -16,9 +16,10 @@ rules_version = '2';
 // blog_posts: slug, title, excerpt, content, category, author, status,
 //   featured_image_url, created_at, updated_at (strings), published_at (string or null)
 // site_settings: key, value, updated_at (strings)
-// authorized_admins: email, uid, display_name, status, added_by, created_at,
-//   updated_at, last_signed_in_at. Contains private access-control data and is
-//   only managed through Firebase Admin SDK route handlers.
+// authorized_admins: email, uid, display_name, status, role, permissions,
+//   department_ids, added_by, created_at, updated_at, last_signed_in_at.
+//   Contains private access-control data and is only managed through Firebase
+//   Admin SDK route handlers.
 // Website-content collections are public to support the public site. Only a
 // verified allowlisted administrator may write.
 
@@ -48,14 +49,11 @@ service cloud.firestore {
         (('uid' in resource.data) && request.resource.data.uid == resource.data.uid);
     }
 
-    function isAdmin() {
+    function isPrimaryAdmin() {
       return isAuthenticated() &&
         request.auth.token.email_verified == true &&
         request.auth.token.email is string &&
-        (
-          request.auth.token.email == 'sopgok9@gmail.com' ||
-          isActiveAddedAdmin(request.auth.token.email)
-        );
+        request.auth.token.email == 'sopgok9@gmail.com';
     }
 
     function isActiveAddedAdmin(email) {
@@ -64,6 +62,60 @@ service cloud.firestore {
         get(path).data.email == email &&
         get(path).data.uid == request.auth.uid &&
         get(path).data.status == 'active';
+    }
+
+    function hasPermission(permission) {
+      let path = /databases/$(database)/documents/authorized_admins/$(request.auth.token.email);
+      return isPrimaryAdmin() ||
+        (
+          isAuthenticated() &&
+          request.auth.token.email_verified == true &&
+          request.auth.token.email is string &&
+          isActiveAddedAdmin(request.auth.token.email) &&
+          (
+            get(path).data.role == 'super_admin' ||
+            (
+              !('role' in get(path).data) &&
+              permission in ['departments', 'events', 'classes', 'blog', 'settings']
+            ) ||
+            (
+              get(path).data.permissions is list &&
+              permission in get(path).data.permissions
+            )
+          )
+        );
+    }
+
+    function isDepartmentHead() {
+      let path = /databases/$(database)/documents/authorized_admins/$(request.auth.token.email);
+      return isAuthenticated() &&
+        request.auth.token.email is string &&
+        isActiveAddedAdmin(request.auth.token.email) &&
+        get(path).data.role == 'department_head';
+    }
+
+    function canManageDepartment(departmentId) {
+      let path = /databases/$(database)/documents/authorized_admins/$(request.auth.token.email);
+      return hasPermission('departments') &&
+        (
+          !isDepartmentHead() ||
+          (
+            get(path).data.department_ids is list &&
+            departmentId in get(path).data.department_ids
+          )
+        );
+    }
+
+    function canManageDepartmentStructure() {
+      return hasPermission('departments') && !isDepartmentHead();
+    }
+
+    function teamExists(teamId) {
+      return exists(/databases/$(database)/documents/teams/$(teamId));
+    }
+
+    function teamDepartmentId(teamId) {
+      return get(/databases/$(database)/documents/teams/$(teamId)).data.department_id;
     }
 
     function validString(value, minLength, maxLength) {
@@ -246,59 +298,72 @@ service cloud.firestore {
 
     match /departments/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidDepartment(request.resource.data);
-      allow update: if isAdmin() && uidNotModified() &&
+      allow create: if canManageDepartmentStructure() && uidUnchanged() &&
+        isValidDepartment(request.resource.data);
+      allow update: if canManageDepartment(documentId) && uidNotModified() &&
         request.resource.data.created_at == resource.data.created_at &&
         isValidDepartment(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if canManageDepartmentStructure();
     }
 
     match /teams/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidTeam(request.resource.data);
-      allow update: if isAdmin() && uidNotModified() && isValidTeam(request.resource.data);
-      allow delete: if isAdmin();
+      allow create: if canManageDepartment(request.resource.data.department_id) &&
+        uidUnchanged() && isValidTeam(request.resource.data);
+      allow update: if canManageDepartment(resource.data.department_id) &&
+        canManageDepartment(request.resource.data.department_id) &&
+        uidNotModified() && isValidTeam(request.resource.data);
+      allow delete: if canManageDepartment(resource.data.department_id);
     }
 
     match /members/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidMember(request.resource.data);
-      allow update: if isAdmin() && uidNotModified() && isValidMember(request.resource.data);
-      allow delete: if isAdmin();
+      allow create: if teamExists(request.resource.data.team_id) &&
+        canManageDepartment(teamDepartmentId(request.resource.data.team_id)) &&
+        uidUnchanged() && isValidMember(request.resource.data);
+      allow update: if teamExists(resource.data.team_id) &&
+        teamExists(request.resource.data.team_id) &&
+        canManageDepartment(teamDepartmentId(resource.data.team_id)) &&
+        canManageDepartment(teamDepartmentId(request.resource.data.team_id)) &&
+        uidNotModified() && isValidMember(request.resource.data);
+      allow delete: if teamExists(resource.data.team_id) &&
+        canManageDepartment(teamDepartmentId(resource.data.team_id));
     }
 
     match /events/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidEvent(request.resource.data);
-      allow update: if isAdmin() && uidNotModified() &&
+      allow create: if hasPermission('events') && uidUnchanged() && isValidEvent(request.resource.data);
+      allow update: if hasPermission('events') && uidNotModified() &&
         request.resource.data.created_at == resource.data.created_at &&
         isValidEvent(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if hasPermission('events');
     }
 
     match /classes/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidClass(request.resource.data);
-      allow update: if isAdmin() && uidNotModified() &&
+      allow create: if hasPermission('classes') && uidUnchanged() && isValidClass(request.resource.data);
+      allow update: if hasPermission('classes') && uidNotModified() &&
         request.resource.data.created_at == resource.data.created_at &&
         isValidClass(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if hasPermission('classes');
     }
 
     match /blog_posts/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidBlogPost(request.resource.data);
-      allow update: if isAdmin() && uidNotModified() &&
+      allow create: if hasPermission('blog') && uidUnchanged() && isValidBlogPost(request.resource.data);
+      allow update: if hasPermission('blog') && uidNotModified() &&
         request.resource.data.created_at == resource.data.created_at &&
         isValidBlogPost(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if hasPermission('blog');
     }
 
     match /site_settings/{documentId} {
       allow read: if true;
-      allow create: if isAdmin() && uidUnchanged() && isValidSiteSetting(request.resource.data, documentId);
-      allow update: if isAdmin() && uidNotModified() && isValidSiteSetting(request.resource.data, documentId);
-      allow delete: if isAdmin();
+      allow create: if hasPermission('settings') && uidUnchanged() &&
+        isValidSiteSetting(request.resource.data, documentId);
+      allow update: if hasPermission('settings') && uidNotModified() &&
+        isValidSiteSetting(request.resource.data, documentId);
+      allow delete: if hasPermission('settings');
     }
 
     // Email addresses and access-control metadata are never exposed to the

@@ -25,29 +25,54 @@ import {
     UserCog,
     CircleUserRound,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+    hasAdminPermission,
+    type AdminAccess,
+    type AdminPermission,
+} from "@/lib/admin-access";
 
-const sidebarLinks = [
+const sidebarLinks: Array<{
+    name: string;
+    href: string;
+    icon: LucideIcon;
+    permission?: AdminPermission;
+}> = [
     { name: "Dashboard", href: ADMIN_DASHBOARD_PATH, icon: LayoutDashboard },
-    { name: "Departments", href: adminPath("/departments"), icon: Users },
-    { name: "Events", href: adminPath("/events"), icon: Calendar },
-    { name: "Classes", href: adminPath("/classes"), icon: BookOpen },
-    { name: "Blog", href: adminPath("/blog"), icon: FileText },
-    { name: "Administrators", href: adminPath("/administrators"), icon: UserCog },
+    { name: "Departments", href: adminPath("/departments"), icon: Users, permission: "departments" },
+    { name: "Events", href: adminPath("/events"), icon: Calendar, permission: "events" },
+    { name: "Classes", href: adminPath("/classes"), icon: BookOpen, permission: "classes" },
+    { name: "Blog", href: adminPath("/blog"), icon: FileText, permission: "blog" },
+    { name: "Administrators", href: adminPath("/administrators"), icon: UserCog, permission: "administrators" },
     { name: "My Profile", href: adminPath("/profile"), icon: CircleUserRound },
-    { name: "Settings", href: adminPath("/settings"), icon: Settings },
+    { name: "Settings", href: adminPath("/settings"), icon: Settings, permission: "settings" },
 ];
 
 export function AdminSidebar() {
     const pathname = usePathname();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [isPrimary, setIsPrimary] = useState(false);
+    const [access, setAccess] = useState<AdminAccess | null>(null);
 
     useEffect(() => {
         void (async () => {
             const response = await fetch("/api/admin/profile", { cache: "no-store" });
             if (!response.ok) return;
-            const body = (await response.json()) as { profile: { isPrimary?: boolean } };
-            setIsPrimary(body.profile.isPrimary === true);
+            const body = (await response.json()) as {
+                profile: {
+                    role: AdminAccess["role"];
+                    permissions: AdminAccess["permissions"];
+                    departmentIds: string[];
+                    isPrimary: boolean;
+                    isLegacy?: boolean;
+                };
+            };
+            setAccess({
+                role: body.profile.role,
+                permissions: body.profile.permissions,
+                departmentIds: body.profile.departmentIds,
+                isPrimary: body.profile.isPrimary,
+                isLegacy: body.profile.isLegacy === true,
+            });
         })();
     }, []);
 
@@ -125,7 +150,9 @@ export function AdminSidebar() {
 
                 {/* Navigation Links */}
                 <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                    {sidebarLinks.filter((link) => link.href !== adminPath("/administrators") || isPrimary).map((link) => {
+                    {sidebarLinks.filter((link) =>
+                        !link.permission || (access && hasAdminPermission(access, link.permission))
+                    ).map((link) => {
                         const isActive =
                             pathname === link.href || pathname.startsWith(link.href + "/");
                         const Icon = link.icon;

@@ -14,10 +14,11 @@ let added: Awaited<ReturnType<typeof createAddedAdmin>>;
 let addedApi: APIRequestContext;
 const createdContentIds: string[] = [];
 const createdImagePaths: string[] = [];
+const testBaseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3101";
 
 test.beforeAll(async () => {
     added = await createAddedAdmin();
-    addedApi = await request.newContext({ baseURL: "http://localhost:3101" });
+    addedApi = await request.newContext({ baseURL: testBaseUrl });
     const response = await addedApi.post("/api/auth/session", { data: { idToken: added.idToken } });
     expect(response.status()).toBe(200);
 });
@@ -73,6 +74,136 @@ test("content API rejects broad, polluted, and timestamp-forging mutations", asy
         },
     });
     expect(forged.status()).toBe(400);
+});
+
+test("content manager is denied sections outside assigned permissions", async () => {
+    const response = await addedApi.post("/api/admin/content", {
+        data: {
+            collection: "events",
+            action: "insert",
+            filters: [],
+            payload: {
+                title: "Unauthorized event",
+                description: "",
+                date: new Date().toISOString(),
+                time: "",
+                location: "",
+                category: "special",
+                status: "upcoming",
+                image_url: "",
+                is_featured: false,
+                registration_url: "",
+            },
+        },
+    });
+    expect(response.status()).toBe(403);
+});
+
+test("department head is restricted to assigned department relationships", async () => {
+    const assignedDepartmentId = `${uniqueRun}-assigned`;
+    const otherDepartmentId = `${uniqueRun}-other`;
+    const assignedTeamId = `${uniqueRun}-assigned-team`;
+    const otherTeamId = `${uniqueRun}-other-team`;
+    const timestamp = new Date().toISOString();
+    const departmentData = (slug: string, name: string) => ({
+        slug,
+        name,
+        full_name: `${name} Department`,
+        description: "Temporary RBAC test department",
+        image_url: "",
+        objectives: ["Test scoped access"],
+        responsibilities: ["Test scoped access"],
+        is_active: false,
+        display_order: 9999,
+        created_at: timestamp,
+        updated_at: timestamp,
+    });
+
+    await Promise.all([
+        adminDb.collection("departments").doc(assignedDepartmentId)
+            .set(departmentData(`${uniqueRun}-assigned`, "Assigned")),
+        adminDb.collection("departments").doc(otherDepartmentId)
+            .set(departmentData(`${uniqueRun}-other`, "Other")),
+        adminDb.collection("teams").doc(assignedTeamId)
+            .set({ department_id: assignedDepartmentId, title: "Assigned Team", display_order: 0 }),
+        adminDb.collection("teams").doc(otherTeamId)
+            .set({ department_id: otherDepartmentId, title: "Other Team", display_order: 0 }),
+    ]);
+
+    const departmentHead = await createAddedAdmin({
+        role: "department_head",
+        permissions: ["departments"],
+        departmentIds: [assignedDepartmentId],
+    });
+    const departmentApi = await request.newContext({ baseURL: testBaseUrl });
+    let insertedTeamId = "";
+    try {
+        expect((await departmentApi.post("/api/auth/session", {
+            data: { idToken: departmentHead.idToken },
+        })).status()).toBe(200);
+
+        const allowed = await departmentApi.post("/api/admin/content", {
+            data: {
+                collection: "departments",
+                action: "update",
+                filters: [{ field: "id", operator: "==", value: assignedDepartmentId }],
+                payload: { description: "Updated by assigned department head" },
+            },
+        });
+        expect(allowed.status()).toBe(200);
+
+        const denied = await departmentApi.post("/api/admin/content", {
+            data: {
+                collection: "departments",
+                action: "update",
+                filters: [{ field: "id", operator: "==", value: otherDepartmentId }],
+                payload: { description: "Unauthorized update" },
+            },
+        });
+        expect(denied.status()).toBe(403);
+
+        const teamInsert = await departmentApi.post("/api/admin/content", {
+            data: {
+                collection: "teams",
+                action: "insert",
+                filters: [],
+                payload: {
+                    department_id: assignedDepartmentId,
+                    title: "Department Head Team",
+                    display_order: 1,
+                },
+            },
+        });
+        expect(teamInsert.status()).toBe(200);
+        const teamBody = await teamInsert.json() as { data: Array<{ id: string }> };
+        insertedTeamId = teamBody.data[0].id;
+
+        const crossDepartmentTeam = await departmentApi.post("/api/admin/content", {
+            data: {
+                collection: "teams",
+                action: "insert",
+                filters: [],
+                payload: {
+                    department_id: otherDepartmentId,
+                    title: "Unauthorized Team",
+                    display_order: 1,
+                },
+            },
+        });
+        expect(crossDepartmentTeam.status()).toBe(403);
+    } finally {
+        await departmentApi.dispose();
+        await cleanupIdentity(departmentHead.email, departmentHead.uid);
+        if (insertedTeamId) {
+            await adminDb.collection("teams").doc(insertedTeamId).delete().catch(() => undefined);
+        }
+        await Promise.all([
+            adminDb.collection("teams").doc(assignedTeamId).delete().catch(() => undefined),
+            adminDb.collection("teams").doc(otherTeamId).delete().catch(() => undefined),
+            adminDb.collection("departments").doc(assignedDepartmentId).delete().catch(() => undefined),
+            adminDb.collection("departments").doc(otherDepartmentId).delete().catch(() => undefined),
+        ]);
+    }
 });
 
 test("added admin can publish and remove one validated class", async () => {
@@ -154,7 +285,7 @@ test("added admin can publish and remove one validated class", async () => {
 test("added admin can upload, proxy-read, and delete an isolated image", async () => {
     const upload = await addedApi.post("/api/admin/images", {
         multipart: {
-            folder: "settings",
+            folder: "classes",
             file: {
                 name: `${uniqueRun}.png`,
                 mimeType: "image/png",
@@ -182,7 +313,7 @@ test("removing an allowlist record invalidates an existing added-admin session",
 
 test("primary invite flow never force-verifies an existing unverified account", async () => {
     const primary = await adminAuth.getUserByEmail(primaryAdminEmail);
-    const primaryApi = await request.newContext({ baseURL: "http://localhost:3101" });
+    const primaryApi = await request.newContext({ baseURL: testBaseUrl });
     const session = await primaryApi.post("/api/auth/session", {
         data: { idToken: await idTokenForUid(primary.uid) },
     });
@@ -192,7 +323,7 @@ test("primary invite flow never force-verifies an existing unverified account", 
     const user = await adminAuth.createUser({ email, emailVerified: false, disabled: false });
     try {
         const invite = await primaryApi.post("/api/admin/users", {
-            data: { email, displayName: "Unverified Test" },
+            data: { email, displayName: "Unverified Test", role: "classes_manager" },
         });
         expect(invite.status()).toBe(409);
         const unchanged = await adminAuth.getUser(user.uid);

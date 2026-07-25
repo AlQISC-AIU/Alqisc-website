@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getFirebaseAdminDb, verifyAdminSession } from "@/lib/firebase/admin";
+import { getFirebaseAdminDb, verifyAdminContext } from "@/lib/firebase/admin";
 import { createClient } from "@/lib/firebase/server";
 import { withDefaults, withUpdateTimestamp } from "@/lib/firebase/client";
 import {
@@ -8,10 +8,25 @@ import {
     type ContentCollection,
 } from "@/lib/firebase/content-validation";
 import { sanitizeRichText } from "@/lib/sanitize-rich-text";
+import {
+    canManageDepartment,
+    hasAdminPermission,
+    type AdminAccess,
+    type AdminPermission,
+} from "@/lib/admin-access";
 
 export const runtime = "nodejs";
 
 const ALLOWED_ACTIONS = new Set(["insert", "upsert", "update", "delete"]);
+const COLLECTION_PERMISSIONS: Record<ContentCollection, AdminPermission> = {
+    departments: "departments",
+    teams: "departments",
+    members: "departments",
+    events: "events",
+    classes: "classes",
+    blog_posts: "blog",
+    site_settings: "settings",
+};
 
 type Filter = { field: string; operator: "==" | "!="; value: unknown };
 type MutationBody = {
@@ -23,7 +38,8 @@ type MutationBody = {
 };
 
 export async function POST(request: Request) {
-    if (!(await verifyAdminSession())) {
+    const context = await verifyAdminContext();
+    if (!context) {
         return NextResponse.json({ error: "Your admin session expired. Please sign in again." }, { status: 401 });
     }
     const rawBody = await request.text();
@@ -40,6 +56,12 @@ export async function POST(request: Request) {
     const action = body?.action || "";
     if (!isContentCollection(collection) || !ALLOWED_ACTIONS.has(action)) {
         return NextResponse.json({ error: "Invalid admin content operation." }, { status: 400 });
+    }
+    if (!hasAdminPermission(context.access, COLLECTION_PERMISSIONS[collection])) {
+        return NextResponse.json(
+            { error: "You do not have permission to manage this section." },
+            { status: 403 }
+        );
     }
     const filters = body?.filters || [];
     const exactIdFilter = filters.length === 1 &&
@@ -88,6 +110,16 @@ export async function POST(request: Request) {
     }
 
     const documentId = exactIdFilter ? String(filters[0].value) : undefined;
+    const scopeError = await validateDepartmentScope(
+        context.access,
+        collection,
+        action,
+        inputRows,
+        documentId,
+    );
+    if (scopeError) {
+        return NextResponse.json({ error: scopeError }, { status: 403 });
+    }
     const preparedRows = await prepareAndValidateRows(collection, action, inputRows, documentId);
     if ("error" in preparedRows) {
         return NextResponse.json({ error: preparedRows.error }, { status: preparedRows.status });
@@ -110,6 +142,80 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: result.error.message }, { status: 400 });
     }
     return NextResponse.json({ data: result.data });
+}
+
+async function validateDepartmentScope(
+    access: AdminAccess,
+    collection: ContentCollection,
+    action: string,
+    rows: Record<string, unknown>[],
+    documentId?: string,
+): Promise<string | null> {
+    if (access.role !== "department_head" || !["departments", "teams", "members"].includes(collection)) {
+        return null;
+    }
+
+    const denied = "You can manage only your assigned department, teams, and members.";
+    const db = getFirebaseAdminDb();
+
+    if (collection === "departments") {
+        if (action !== "update" || !documentId || !canManageDepartment(access, documentId)) {
+            return denied;
+        }
+        return null;
+    }
+
+    const teamDepartmentId = async (teamId: unknown): Promise<string | null> => {
+        if (typeof teamId !== "string" || !teamId) return null;
+        const team = await db.collection("teams").doc(teamId).get();
+        return team.exists && typeof team.data()?.department_id === "string"
+            ? String(team.data()?.department_id)
+            : null;
+    };
+
+    if (collection === "teams") {
+        if (action === "insert") {
+            return rows.every((row) =>
+                typeof row.department_id === "string" &&
+                canManageDepartment(access, row.department_id)
+            ) ? null : denied;
+        }
+        if (!documentId) return denied;
+        const existing = await db.collection("teams").doc(documentId).get();
+        const currentDepartmentId = existing.data()?.department_id;
+        if (
+            !existing.exists ||
+            typeof currentDepartmentId !== "string" ||
+            !canManageDepartment(access, currentDepartmentId)
+        ) {
+            return denied;
+        }
+        if (action === "update" && typeof rows[0]?.department_id === "string" &&
+            !canManageDepartment(access, String(rows[0].department_id))) {
+            return denied;
+        }
+        return null;
+    }
+
+    if (action === "insert") {
+        for (const row of rows) {
+            const departmentId = await teamDepartmentId(row.team_id);
+            if (!departmentId || !canManageDepartment(access, departmentId)) return denied;
+        }
+        return null;
+    }
+
+    if (!documentId) return denied;
+    const existingMember = await db.collection("members").doc(documentId).get();
+    if (!existingMember.exists) return denied;
+    const currentDepartmentId = await teamDepartmentId(existingMember.data()?.team_id);
+    if (!currentDepartmentId || !canManageDepartment(access, currentDepartmentId)) return denied;
+
+    if (action === "update" && typeof rows[0]?.team_id === "string") {
+        const nextDepartmentId = await teamDepartmentId(rows[0].team_id);
+        if (!nextDepartmentId || !canManageDepartment(access, nextDepartmentId)) return denied;
+    }
+    return null;
 }
 
 async function prepareAndValidateRows(

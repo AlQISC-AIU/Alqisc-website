@@ -1,10 +1,16 @@
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-routes";
+import {
+    hasAdminPermission,
+    normalizeAdminAccess,
+    type AdminAccess,
+    type AdminPermission,
+} from "@/lib/admin-access";
 
 export const PRIMARY_ADMIN_EMAIL = normalizeAdminEmail(
     process.env.PRIMARY_ADMIN_EMAIL || ""
@@ -67,7 +73,36 @@ export async function isAdminEmailAuthorized(email: string, uid?: string): Promi
         admin?.status === "active";
 }
 
-export async function verifyAdminSession() {
+export async function getAdminAccess(
+    email: string,
+    uid: string,
+): Promise<AdminAccess | null> {
+    const normalizedEmail = normalizeAdminEmail(email);
+    const isPrimary = Boolean(PRIMARY_ADMIN_EMAIL && normalizedEmail === PRIMARY_ADMIN_EMAIL);
+    if (isPrimary) return normalizeAdminAccess(undefined, true);
+
+    const snapshot = await getFirebaseAdminDb()
+        .collection(AUTHORIZED_ADMINS_COLLECTION)
+        .doc(normalizedEmail)
+        .get();
+    const admin = snapshot.data();
+    if (
+        !snapshot.exists ||
+        admin?.email !== normalizedEmail ||
+        admin?.uid !== uid ||
+        admin?.status !== "active"
+    ) {
+        return null;
+    }
+    return normalizeAdminAccess(admin, false);
+}
+
+export type VerifiedAdminContext = {
+    token: DecodedIdToken;
+    access: AdminAccess;
+};
+
+export async function verifyAdminContext(): Promise<VerifiedAdminContext | null> {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!sessionCookie) return null;
@@ -75,15 +110,34 @@ export async function verifyAdminSession() {
     try {
         const token = await getFirebaseAdminAuth().verifySessionCookie(sessionCookie, true);
         if (!token.email || token.email_verified !== true) return null;
-        if (!(await isAdminEmailAuthorized(token.email, token.uid))) return null;
-        return token;
+        const access = await getAdminAccess(token.email, token.uid);
+        if (!access) return null;
+        return { token, access };
     } catch {
         return null;
     }
 }
 
+export async function verifyAdminSession() {
+    return (await verifyAdminContext())?.token || null;
+}
+
 export async function requireAdminSession() {
-    const token = await verifyAdminSession();
-    if (!token) redirect(ADMIN_LOGIN_PATH);
-    return token;
+    const context = await verifyAdminContext();
+    if (!context) redirect(ADMIN_LOGIN_PATH);
+    return context.token;
+}
+
+export async function requireAdminContext() {
+    const context = await verifyAdminContext();
+    if (!context) redirect(ADMIN_LOGIN_PATH);
+    return context;
+}
+
+export async function requireAdminPermission(permission: AdminPermission) {
+    const context = await requireAdminContext();
+    if (!hasAdminPermission(context.access, permission)) {
+        redirect("/club-console-alqisc-7q4m-test/admin/dashboard");
+    }
+    return context;
 }

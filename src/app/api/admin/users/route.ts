@@ -5,33 +5,48 @@ import {
     getFirebaseAdminDb,
     normalizeAdminEmail,
     PRIMARY_ADMIN_EMAIL,
-    verifyAdminSession,
+    verifyAdminContext,
 } from "@/lib/firebase/admin";
 import { sendPasswordSetupEmail } from "@/lib/firebase/auth-email";
+import {
+    hasAdminPermission,
+    normalizeAdminAccess,
+    validateRoleAssignment,
+} from "@/lib/admin-access";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function requirePrimaryAdministrator() {
-    const token = await verifyAdminSession();
-    if (!token?.email || normalizeAdminEmail(token.email) !== PRIMARY_ADMIN_EMAIL) {
+async function requireSuperAdministrator() {
+    const context = await verifyAdminContext();
+    if (!context || !hasAdminPermission(context.access, "administrators")) {
         return null;
     }
-    return token;
+    return context;
+}
+
+async function validateDepartmentsExist(departmentIds: string[]): Promise<boolean> {
+    const db = getFirebaseAdminDb();
+    const snapshots = await Promise.all(
+        departmentIds.map((id) => db.collection("departments").doc(id).get())
+    );
+    return snapshots.every((snapshot) => snapshot.exists);
 }
 
 export async function GET() {
-    const token = await requirePrimaryAdministrator();
-    if (!token) {
+    const context = await requireSuperAdministrator();
+    if (!context) {
         return NextResponse.json(
-            { error: "Only the primary administrator can manage admin access." },
+            { error: "Only a super administrator can manage admin access." },
             { status: 403 }
         );
     }
 
-    const snapshot = await getFirebaseAdminDb()
-        .collection(AUTHORIZED_ADMINS_COLLECTION)
-        .orderBy("created_at", "asc")
-        .get();
+    const db = getFirebaseAdminDb();
+    const [snapshot, departmentSnapshot] = await Promise.all([
+        db.collection(AUTHORIZED_ADMINS_COLLECTION).orderBy("created_at", "asc").get(),
+        db.collection("departments").orderBy("display_order", "asc").get(),
+    ]);
+    const primaryAccess = normalizeAdminAccess(undefined, true);
 
     const admins = [
         {
@@ -41,31 +56,54 @@ export async function GET() {
             is_primary: true,
             created_at: null,
             last_signed_in_at: null,
+            role: primaryAccess.role,
+            permissions: primaryAccess.permissions,
+            department_ids: primaryAccess.departmentIds,
+            is_legacy: false,
         },
-        ...snapshot.docs.filter((document) => document.id !== PRIMARY_ADMIN_EMAIL).map((document) => ({
-            email: document.id,
-            display_name: document.data().display_name || "",
-            status: document.data().status || "invited",
-            is_primary: false,
-            created_at: document.data().created_at || null,
-            last_signed_in_at: document.data().last_signed_in_at || null,
-        })),
+        ...snapshot.docs.filter((document) => document.id !== PRIMARY_ADMIN_EMAIL).map((document) => {
+            const data = document.data();
+            const access = normalizeAdminAccess(data, false);
+            return {
+                email: document.id,
+                display_name: data.display_name || "",
+                status: data.status || "invited",
+                is_primary: false,
+                created_at: data.created_at || null,
+                last_signed_in_at: data.last_signed_in_at || null,
+                role: access.role,
+                permissions: access.permissions,
+                department_ids: access.departmentIds,
+                is_legacy: access.isLegacy,
+            };
+        }),
     ];
 
-    return NextResponse.json({ admins });
+    const departments = departmentSnapshot.docs.map((document) => ({
+        id: document.id,
+        name: document.data().full_name || document.data().name || document.id,
+    }));
+
+    return NextResponse.json({ admins, departments });
 }
 
 export async function POST(request: Request) {
-    const token = await requirePrimaryAdministrator();
-    if (!token?.email) {
+    const context = await requireSuperAdministrator();
+    if (!context?.token.email) {
         return NextResponse.json(
-            { error: "Only the primary administrator can invite admins." },
+            { error: "Only a super administrator can invite admins." },
             { status: 403 }
         );
     }
 
     const body = (await request.json().catch(() => null)) as
-        | { email?: string; displayName?: string }
+        | {
+            email?: string;
+            displayName?: string;
+            role?: unknown;
+            permissions?: unknown;
+            departmentIds?: unknown;
+        }
         | null;
     const email = normalizeAdminEmail(body?.email || "");
     const requestedDisplayName = body?.displayName?.trim() || "";
@@ -83,6 +121,17 @@ export async function POST(request: Request) {
             { error: "Enter the administrator's name (2 to 80 characters)." },
             { status: 400 }
         );
+    }
+    const assignment = validateRoleAssignment({
+        role: body?.role,
+        permissions: body?.permissions,
+        departmentIds: body?.departmentIds,
+    });
+    if ("error" in assignment) {
+        return NextResponse.json({ error: assignment.error }, { status: 400 });
+    }
+    if (!(await validateDepartmentsExist(assignment.departmentIds))) {
+        return NextResponse.json({ error: "One or more selected departments no longer exist." }, { status: 400 });
     }
 
     const reference = getFirebaseAdminDb().collection(AUTHORIZED_ADMINS_COLLECTION).doc(email);
@@ -127,7 +176,10 @@ export async function POST(request: Request) {
         uid: user.uid,
         display_name: requestedDisplayName,
         status: "invited",
-        added_by: normalizeAdminEmail(token.email),
+        role: assignment.role,
+        permissions: assignment.permissions,
+        department_ids: assignment.departmentIds,
+        added_by: normalizeAdminEmail(context.token.email),
         created_at: timestamp,
         updated_at: timestamp,
         last_signed_in_at: null,
@@ -149,18 +201,50 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-    const token = await requirePrimaryAdministrator();
-    if (!token) {
+    const context = await requireSuperAdministrator();
+    if (!context) {
         return NextResponse.json(
-            { error: "Only the primary administrator can resend invitations." },
+            { error: "Only a super administrator can update admin access." },
             { status: 403 }
         );
     }
-    const body = (await request.json().catch(() => null)) as { email?: string } | null;
+    const body = (await request.json().catch(() => null)) as {
+        action?: "resend" | "access";
+        email?: string;
+        role?: unknown;
+        permissions?: unknown;
+        departmentIds?: unknown;
+    } | null;
     const email = normalizeAdminEmail(body?.email || "");
     const reference = getFirebaseAdminDb().collection(AUTHORIZED_ADMINS_COLLECTION).doc(email);
     if (!EMAIL_PATTERN.test(email) || !(await reference.get()).exists) {
         return NextResponse.json({ error: "Administrator invitation not found." }, { status: 404 });
+    }
+    if (email === PRIMARY_ADMIN_EMAIL) {
+        return NextResponse.json({ error: "The primary administrator's access cannot be changed." }, { status: 400 });
+    }
+    if (body?.action === "access") {
+        const assignment = validateRoleAssignment({
+            role: body.role,
+            permissions: body.permissions,
+            departmentIds: body.departmentIds,
+        });
+        if ("error" in assignment) {
+            return NextResponse.json({ error: assignment.error }, { status: 400 });
+        }
+        if (!(await validateDepartmentsExist(assignment.departmentIds))) {
+            return NextResponse.json({ error: "One or more selected departments no longer exist." }, { status: 400 });
+        }
+        await reference.set({
+            role: assignment.role,
+            permissions: assignment.permissions,
+            department_ids: assignment.departmentIds,
+            updated_at: new Date().toISOString(),
+        }, { merge: true });
+        return NextResponse.json({ success: true, accessUpdated: true });
+    }
+    if (body?.action !== "resend") {
+        return NextResponse.json({ error: "Choose a valid administrator action." }, { status: 400 });
     }
     try {
         await getFirebaseAdminAuth().getUserByEmail(email);
@@ -176,10 +260,10 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-    const token = await requirePrimaryAdministrator();
-    if (!token) {
+    const context = await requireSuperAdministrator();
+    if (!context) {
         return NextResponse.json(
-            { error: "Only the primary administrator can remove admins." },
+            { error: "Only a super administrator can remove admins." },
             { status: 403 }
         );
     }

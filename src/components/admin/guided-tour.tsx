@@ -235,7 +235,7 @@ const ADMINISTRATORS_GUIDE_STEPS: TourStep[] = [
     {
         target: "[data-tour='administrators-page']",
         title: "Invite Administrators",
-        content: "The primary administrator can invite an approved email address. Only approved and active accounts can create an admin session.",
+        content: "A super administrator can invite an approved email address and choose exactly which sections that person can manage.",
         placement: "bottom",
     },
     {
@@ -302,7 +302,7 @@ const ADMINISTRATORS_STEPS: TourStep[] = [
     target: "main",
     title: "Manage Access Carefully",
     content:
-      "You can remove access when it is no longer needed. Only the primary administrator can manage this section.",
+      "You can change roles, update assigned departments, resend setup emails, or remove access when it is no longer needed.",
   },
 ];
 

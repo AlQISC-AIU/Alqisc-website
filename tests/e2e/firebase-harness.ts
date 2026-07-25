@@ -44,8 +44,12 @@ export async function idTokenForUid(uid: string): Promise<string> {
     return body.idToken;
 }
 
-export async function createAddedAdmin() {
-    const email = `${uniqueRun}@example.com`;
+export async function createAddedAdmin(access: {
+    role?: string;
+    permissions?: string[];
+    departmentIds?: string[];
+} = {}) {
+    const email = `${uniqueRun}-${Math.random().toString(36).slice(2, 8)}@example.com`;
     const user = await adminAuth.createUser({
         email,
         emailVerified: true,
@@ -57,6 +61,9 @@ export async function createAddedAdmin() {
         uid: user.uid,
         display_name: "Codex E2E Admin",
         status: "active",
+        role: access.role || "content_manager",
+        permissions: access.permissions || ["classes"],
+        department_ids: access.departmentIds || [],
         added_by: "e2e-harness",
         created_at: timestamp,
         updated_at: timestamp,
