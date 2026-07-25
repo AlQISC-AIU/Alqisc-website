@@ -1,10 +1,15 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+    ADMIN_DASHBOARD_PATH,
+    ADMIN_LOGIN_PATH,
+    adminPath,
+} from "@/lib/admin-routes";
 import {
     LayoutDashboard,
     Users,
@@ -21,14 +26,14 @@ import {
 } from "lucide-react";
 
 const sidebarLinks = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { name: "Departments", href: "/admin/departments", icon: Users },
-    { name: "Events", href: "/admin/events", icon: Calendar },
-    { name: "Classes", href: "/admin/classes", icon: BookOpen },
-    { name: "Blog", href: "/admin/blog", icon: FileText },
-    { name: "Administrators", href: "/admin/administrators", icon: UserCog },
-    { name: "My Profile", href: "/admin/profile", icon: CircleUserRound },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+    { name: "Dashboard", href: ADMIN_DASHBOARD_PATH, icon: LayoutDashboard },
+    { name: "Departments", href: adminPath("/departments"), icon: Users },
+    { name: "Events", href: adminPath("/events"), icon: Calendar },
+    { name: "Classes", href: adminPath("/classes"), icon: BookOpen },
+    { name: "Blog", href: adminPath("/blog"), icon: FileText },
+    { name: "Administrators", href: adminPath("/administrators"), icon: UserCog },
+    { name: "My Profile", href: adminPath("/profile"), icon: CircleUserRound },
+    { name: "Settings", href: adminPath("/settings"), icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -79,7 +84,7 @@ export function AdminSidebar() {
                 {/* Logo & Close */}
                 <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
                     <Link
-                        href="/admin/dashboard"
+                        href={ADMIN_DASHBOARD_PATH}
                         className="flex items-center gap-3"
                         onClick={() => setIsMobileOpen(false)}
                     >
@@ -110,7 +115,7 @@ export function AdminSidebar() {
 
                 {/* Navigation Links */}
                 <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                    {sidebarLinks.filter((link) => link.href !== "/admin/administrators" || isPrimary).map((link) => {
+                    {sidebarLinks.filter((link) => link.href !== adminPath("/administrators") || isPrimary).map((link) => {
                         const isActive =
                             pathname === link.href || pathname.startsWith(link.href + "/");
                         const Icon = link.icon;
@@ -153,7 +158,7 @@ export function AdminSidebar() {
                             const { createClient } = await import("@/lib/firebase/client");
                             const firebase = createClient();
                             await firebase.auth.signOut();
-                            window.location.href = "/admin/login";
+                            window.location.href = ADMIN_LOGIN_PATH;
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-200 transition-all duration-200"
                     >
@@ -201,7 +206,7 @@ export function AdminTopbar({ title }: { title: string }) {
                         <p className="text-sm font-medium text-[var(--dark)]">{displayName}</p>
                         <p className="text-xs text-[var(--gray)]">{userEmail ?? "..."}</p>
                     </div>
-                    <Link href="/admin/profile" aria-label="Open my profile" className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-sm font-bold text-white">
+                    <Link href={adminPath("/profile")} aria-label="Open my profile" className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-sm font-bold text-white">
                         {photoUrl ? <Image src={photoUrl} alt="" fill sizes="36px" className="object-cover" /> : (displayName || userEmail || "A").charAt(0).toUpperCase()}
                     </Link>
                 </div>

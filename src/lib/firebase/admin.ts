@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-routes";
 
 export const PRIMARY_ADMIN_EMAIL = normalizeAdminEmail(
     process.env.PRIMARY_ADMIN_EMAIL || ""
@@ -83,6 +84,6 @@ export async function verifyAdminSession() {
 
 export async function requireAdminSession() {
     const token = await verifyAdminSession();
-    if (!token) redirect("/admin/login");
+    if (!token) redirect(ADMIN_LOGIN_PATH);
     return token;
 }

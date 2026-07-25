@@ -34,8 +34,8 @@ test.afterAll(async () => {
 });
 
 test("anonymous users cannot access protected pages or APIs", async ({ request: anonymous, page }) => {
-    await page.goto("/admin/dashboard");
-    await expect(page).toHaveURL(/\/admin\/login/);
+    await page.goto("/club-console-alqisc-7q4m-test/admin/dashboard");
+    await expect(page).toHaveURL(/\/club-console-alqisc-7q4m-test\/admin\/login/);
     expect((await anonymous.post("/api/admin/content", { data: {} })).status()).toBe(401);
     expect((await anonymous.get("/api/admin/profile")).status()).toBe(401);
     expect((await anonymous.get("/api/admin/users")).status()).toBe(403);

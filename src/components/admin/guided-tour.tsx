@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { X, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { ADMIN_BASE_PATH, ADMIN_DASHBOARD_PATH } from "@/lib/admin-routes";
 
 interface TourStep {
     target: string; // CSS selector
@@ -193,20 +194,24 @@ const SETTINGS_STEPS: TourStep[] = [
 // ── Route → Steps mapping ───────────────────────────────────────────
 
 function getStepsForPath(pathname: string): TourStep[] {
-    if (pathname === "/admin/dashboard") return DASHBOARD_STEPS;
-    if (pathname === "/admin/departments") return DEPARTMENTS_LIST_STEPS;
-    if (pathname === "/admin/departments/new") return DEPARTMENTS_NEW_STEPS;
-    if (/^\/admin\/departments\/.+\/edit$/.test(pathname)) return DEPARTMENTS_EDIT_STEPS;
-    if (pathname === "/admin/events") return EVENTS_LIST_STEPS;
-    if (pathname === "/admin/events/new") return EVENTS_NEW_STEPS;
-    if (/^\/admin\/events\/.+\/edit$/.test(pathname)) return EVENTS_NEW_STEPS;
-    if (pathname === "/admin/classes") return CLASSES_LIST_STEPS;
-    if (pathname === "/admin/classes/new") return CLASSES_NEW_STEPS;
-    if (/^\/admin\/classes\/.+\/edit$/.test(pathname)) return CLASSES_NEW_STEPS;
-    if (pathname === "/admin/blog") return BLOG_LIST_STEPS;
-    if (pathname === "/admin/blog/new") return BLOG_NEW_STEPS;
-    if (/^\/admin\/blog\/.+\/edit$/.test(pathname)) return BLOG_NEW_STEPS;
-    if (pathname === "/admin/settings") return SETTINGS_STEPS;
+    const route = pathname.startsWith(ADMIN_BASE_PATH)
+        ? pathname.slice(ADMIN_BASE_PATH.length) || "/"
+        : pathname;
+
+    if (route === "/dashboard") return DASHBOARD_STEPS;
+    if (route === "/departments") return DEPARTMENTS_LIST_STEPS;
+    if (route === "/departments/new") return DEPARTMENTS_NEW_STEPS;
+    if (/^\/departments\/.+\/edit$/.test(route)) return DEPARTMENTS_EDIT_STEPS;
+    if (route === "/events") return EVENTS_LIST_STEPS;
+    if (route === "/events/new") return EVENTS_NEW_STEPS;
+    if (/^\/events\/.+\/edit$/.test(route)) return EVENTS_NEW_STEPS;
+    if (route === "/classes") return CLASSES_LIST_STEPS;
+    if (route === "/classes/new") return CLASSES_NEW_STEPS;
+    if (/^\/classes\/.+\/edit$/.test(route)) return CLASSES_NEW_STEPS;
+    if (route === "/blog") return BLOG_LIST_STEPS;
+    if (route === "/blog/new") return BLOG_NEW_STEPS;
+    if (/^\/blog\/.+\/edit$/.test(route)) return BLOG_NEW_STEPS;
+    if (route === "/settings") return SETTINGS_STEPS;
     return DASHBOARD_STEPS;
 }
 
@@ -233,7 +238,7 @@ export function GuidedTour() {
 
     // Auto-start tour on first visit to dashboard only
     useEffect(() => {
-        if (pathname !== "/admin/dashboard") return;
+        if (pathname !== ADMIN_DASHBOARD_PATH) return;
         const seen = localStorage.getItem(TOUR_STORAGE_KEY);
         if (!seen) {
             const timer = setTimeout(() => setIsRunning(true), 800);
