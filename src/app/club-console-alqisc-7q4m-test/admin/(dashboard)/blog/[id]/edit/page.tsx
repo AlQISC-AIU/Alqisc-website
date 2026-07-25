@@ -224,7 +224,7 @@ export default function EditBlogPostPage({ params }: { params: Promise<{ id: str
                     <span className="text-[var(--gray)] truncate max-w-[200px]">{post.title}</span>
                 </div>
 
-                <div className="max-w-6xl">
+            <div data-tour="blog-form" className="max-w-6xl">
                     <div className="grid lg:grid-cols-3 gap-6 flex-col-reverse lg:flex-row">
                         {/* Left Column */}
                         <div className="lg:col-span-2 space-y-5">

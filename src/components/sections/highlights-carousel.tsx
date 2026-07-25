@@ -123,8 +123,8 @@ export function HighlightsCarousel({
 
   return (
     <>
-      <section ref={sectionRef} className="bg-[var(--light)] py-20 md:py-24 lg:py-28">
-        <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+      <section ref={sectionRef} className="overflow-x-clip bg-[var(--light)] py-20 md:py-24 lg:py-28">
+        <div className="container mx-auto min-w-0 px-5 sm:px-6 lg:px-8">
           {/* Header */}
           <div
             className={cn(
@@ -145,7 +145,7 @@ export function HighlightsCarousel({
           {/* Carousel */}
           <div
             className={cn(
-              "relative transition-all duration-700 delay-300",
+              "relative min-w-0 transition-all duration-700 delay-300",
               isVisible
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 translate-y-10"
@@ -155,20 +155,20 @@ export function HighlightsCarousel({
             <button
               onClick={goToPrevious}
               aria-label="Previous slide"
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 z-10 w-12 h-12 bg-[var(--secondary)] rounded-full shadow-lg flex items-center justify-center text-white hover:bg-[var(--primary)] transition-colors"
+              className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--secondary)] text-white shadow-lg transition-colors hover:bg-[var(--primary)] sm:h-12 sm:w-12 md:-translate-x-6"
             >
               <ChevronRight className="w-6 h-6" />
             </button>
             <button
               onClick={goToNext}
               aria-label="Next slide"
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 z-10 w-12 h-12 bg-[var(--secondary)] rounded-full shadow-lg flex items-center justify-center text-white hover:bg-[var(--primary)] transition-colors"
+              className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--secondary)] text-white shadow-lg transition-colors hover:bg-[var(--primary)] sm:h-12 sm:w-12 md:translate-x-6"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
 
             {/* Carousel Track */}
-            <div className="overflow-hidden mx-8 md:mx-12">
+            <div className="mx-7 min-w-0 overflow-hidden sm:mx-8 md:mx-12">
               <div
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{
@@ -178,13 +178,13 @@ export function HighlightsCarousel({
                 {images.map((image, index) => (
                   <div
                     key={index}
-                    className="flex-shrink-0 px-3"
+                    className="min-w-0 flex-shrink-0 px-2 sm:px-3"
                     style={{ width: `${100 / itemsPerView}%` }}
                   >
                     <button
                       type="button"
                       aria-label={`Open ${image.title || image.alt}`}
-                      className="w-full bg-white rounded-2xl shadow-lg overflow-hidden p-6 md:p-8 cursor-pointer group"
+                      className="group w-full cursor-pointer overflow-hidden rounded-2xl bg-white p-3 shadow-lg sm:p-6 md:p-8"
                       onClick={() => openLightbox(index)}
                     >
                       <div className="relative aspect-square rounded-xl overflow-hidden">

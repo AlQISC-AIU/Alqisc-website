@@ -224,7 +224,7 @@ export default function EditClassPage({ params }: { params: Promise<{ id: string
                     <span className="text-[var(--gray)]">Edit Class</span>
                 </div>
 
-                <form onSubmit={handleSubmit} className="max-w-5xl">
+            <form data-tour="class-form" onSubmit={handleSubmit} className="max-w-5xl">
                     <div className="grid lg:grid-cols-3 gap-6">
                         {/* Left Column — Main Fields */}
                         <div className="lg:col-span-2 space-y-5">

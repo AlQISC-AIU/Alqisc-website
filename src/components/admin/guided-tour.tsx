@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { X, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
-import { ADMIN_BASE_PATH, ADMIN_DASHBOARD_PATH } from "@/lib/admin-routes";
+import {
+    ADMIN_BASE_PATH,
+    ADMIN_DASHBOARD_PATH,
+    ADMIN_MOBILE_NAV_EVENT,
+} from "@/lib/admin-routes";
 
 interface TourStep {
     target: string; // CSS selector
@@ -79,10 +83,10 @@ const DEPARTMENTS_LIST_STEPS: TourStep[] = [
         placement: "bottom",
     },
     {
-        target: "[data-tour='sidebar']",
+        target: "[data-tour='department-list']",
         title: "Department Cards",
         content: "Each department is shown as an expandable card. Click a card to expand it and see its teams and members. You can toggle departments active/inactive, edit, or delete them.",
-        placement: "right",
+        placement: "bottom",
     },
 ];
 
@@ -102,10 +106,22 @@ const DEPARTMENTS_EDIT_STEPS: TourStep[] = [
         content: "Switch between editing department info and managing team members using these tabs.",
         placement: "bottom",
     },
-    {
-        target: "[data-tour='dept-add-member']",
+  {
+    target: "[data-tour='dept-add-member']",
         title: "Add Team Members",
         content: "Click 'Add Member' to add a new person. You can set their photo, name (max 2 words), role, and up to 4 social media links.",
+        placement: "bottom",
+    },
+    {
+        target: "[data-tour='dept-add-team']",
+        title: "Create Another Team",
+        content: "Use this area to create another team inside the department. The new team will then have its own Add Member control.",
+        placement: "top",
+    },
+    {
+        target: "[data-tour='member-actions']",
+        title: "Edit or Remove Members",
+        content: "Use these visible controls to edit a member's details or remove the member. On phones, the controls remain available without requiring hover.",
         placement: "bottom",
     },
 ];
@@ -126,29 +142,47 @@ const EVENTS_LIST_STEPS: TourStep[] = [
 ];
 
 const EVENTS_NEW_STEPS: TourStep[] = [
-    {
-        target: "[data-tour='event-form']",
-        title: "Event Form",
+  {
+    target: "[data-tour='event-form']",
+        title: "Event Details",
         content: "Fill in the event details on the left (title, description, date, time, location, registration link). On the right, set the category, status, featured toggle, and upload an image.",
         placement: "bottom",
+    },
+    {
+        target: "[data-tour='event-form']",
+        title: "Publish and Update",
+        content: "Review the status and featured settings before saving. On an edit page, saving updates the existing event; deleting should only be used when the event must be removed permanently.",
+        placement: "top",
     },
 ];
 
 const CLASSES_LIST_STEPS: TourStep[] = [
-    {
-        target: "[data-tour='class-add']",
+  {
+    target: "[data-tour='class-add']",
         title: "Add New Class",
         content: "Click here to create a new Islamic class with schedule, venue, fee, and enrollment details.",
+        placement: "bottom",
+    },
+    {
+        target: "[data-tour='class-list']",
+        title: "Manage Existing Classes",
+        content: "Use this list to review classes, open an edit page, change active visibility, or remove an outdated class.",
         placement: "bottom",
     },
 ];
 
 const CLASSES_NEW_STEPS: TourStep[] = [
-    {
-        target: "[data-tour='class-form']",
-        title: "Class Form",
+  {
+    target: "[data-tour='class-form']",
+        title: "Class Details",
         content: "Fill in class details on the left (title, description, schedule, time, venue, fee, students enrolled, registration link). On the right, upload an image, add learning objectives, and set active status.",
         placement: "bottom",
+    },
+    {
+        target: "[data-tour='class-form']",
+        title: "Visibility and Enrollment",
+        content: "Check the Active setting and enrollment link before saving. Inactive classes stay hidden from public class listings.",
+        placement: "top",
     },
 ];
 
@@ -168,12 +202,117 @@ const BLOG_LIST_STEPS: TourStep[] = [
 ];
 
 const BLOG_NEW_STEPS: TourStep[] = [
-    {
-        target: "[data-tour='blog-form']",
+  {
+    target: "[data-tour='blog-form']",
         title: "Blog Editor",
         content: "Write your post on the left using the rich text editor with formatting tools. On the right, set publishing options (status, category, author), upload a featured image, and preview before publishing.",
         placement: "bottom",
     },
+    {
+        target: "[data-tour='blog-form']",
+        title: "Preview and Publishing",
+        content: "Preview the article before publishing, confirm its category and author, then choose Draft or Published. Draft posts remain hidden from the public blog.",
+        placement: "top",
+    },
+];
+
+const PROFILE_GUIDE_STEPS: TourStep[] = [
+    {
+        target: "[data-tour='profile-page']",
+        title: "Your Administrator Profile",
+        content: "Update your display name and profile photo here. Your email identifies the signed-in account and is not changed from this page.",
+        placement: "bottom",
+    },
+    {
+        target: "[data-tour='profile-page']",
+        title: "Password Security",
+        content: "Use the password option to request a secure password-update email. Keep your administrator account private and sign out on shared devices.",
+        placement: "top",
+    },
+];
+
+const ADMINISTRATORS_GUIDE_STEPS: TourStep[] = [
+    {
+        target: "[data-tour='administrators-page']",
+        title: "Invite Administrators",
+        content: "The primary administrator can invite an approved email address. Only approved and active accounts can create an admin session.",
+        placement: "bottom",
+    },
+    {
+        target: "[data-tour='administrators-page']",
+        title: "Manage Access",
+        content: "Review invitation status, resend account setup when necessary, and remove access when a person should no longer manage the website.",
+        placement: "top",
+    },
+];
+
+const PROFILE_STEPS: TourStep[] = [
+  {
+    target: "main",
+    title: "Your Profile",
+    content:
+      "Update the name and profile photo shown throughout the administration area.",
+  },
+  {
+    target: "[data-tour='dept-add-team']",
+    title: "Create Another Team",
+    content:
+      "Add a team when this department needs another group, committee, or management level.",
+  },
+  {
+    target: "main",
+    title: "Account Security",
+    content:
+      "Your sign-in email is shown here. Use the password option on this page whenever you need to update your credentials.",
+  },
+  {
+    target: "[data-tour='class-list']",
+    title: "Manage Existing Classes",
+    content:
+      "Open a class to review its details, update its schedule and enrollment information, change visibility, or remove it.",
+  },
+  {
+    target: "[data-tour='class-form']",
+    title: "Visibility and Enrollment",
+    content:
+      "Set the class schedule, venue, fee, enrollment link, objectives, and active status before saving.",
+  },
+  {
+    target: "[data-tour='event-form']",
+    title: "Publish and Update",
+    content:
+      "Choose the event status, featured setting, registration link, and image. On edit pages, save changes only after reviewing the details.",
+  },
+  {
+    target: "[data-tour='blog-form']",
+    title: "Preview and Publishing",
+    content:
+      "Use preview to check the article, then save it as a draft or publish it when the content and cover image are ready.",
+  },
+];
+
+const ADMINISTRATORS_STEPS: TourStep[] = [
+  {
+    target: "main",
+    title: "Administrator Access",
+    content:
+      "Invite trusted administrators, review their access status, and resend pending invitations from this page.",
+  },
+  {
+    target: "main",
+    title: "Manage Access Carefully",
+    content:
+      "You can remove access when it is no longer needed. Only the primary administrator can manage this section.",
+  },
+];
+
+const BLOG_PREVIEW_STEPS: TourStep[] = [
+  {
+    target: "article",
+    title: "Article Preview",
+    content:
+      "Review the title, cover image, formatting, links, and mobile readability before publishing.",
+  },
 ];
 
 const SETTINGS_STEPS: TourStep[] = [
@@ -194,6 +333,10 @@ const SETTINGS_STEPS: TourStep[] = [
 // ── Route → Steps mapping ───────────────────────────────────────────
 
 function getStepsForPath(pathname: string): TourStep[] {
+  if (pathname.endsWith("/profile")) return PROFILE_GUIDE_STEPS;
+  if (pathname.endsWith("/administrators"))
+    return ADMINISTRATORS_GUIDE_STEPS;
+  if (pathname.endsWith("/blog/preview")) return BLOG_PREVIEW_STEPS;
     const route = pathname.startsWith(ADMIN_BASE_PATH)
         ? pathname.slice(ADMIN_BASE_PATH.length) || "/"
         : pathname;
@@ -211,6 +354,8 @@ function getStepsForPath(pathname: string): TourStep[] {
     if (route === "/blog") return BLOG_LIST_STEPS;
     if (route === "/blog/new") return BLOG_NEW_STEPS;
     if (/^\/blog\/.+\/edit$/.test(route)) return BLOG_NEW_STEPS;
+    if (route === "/profile") return PROFILE_STEPS;
+    if (route === "/administrators") return ADMINISTRATORS_STEPS;
     if (route === "/settings") return SETTINGS_STEPS;
     return DASHBOARD_STEPS;
 }
@@ -220,7 +365,8 @@ const TOUR_STORAGE_KEY = "alqisc-admin-tour-seen";
 export function GuidedTour() {
     const pathname = usePathname();
     const [isRunning, setIsRunning] = useState(false);
-    const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [targetVersion, setTargetVersion] = useState(0);
     const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
     const [arrowStyle, setArrowStyle] = useState<React.CSSProperties>({});
     const [placement, setPlacement] = useState<"top" | "bottom" | "left" | "right">("bottom");
@@ -253,7 +399,7 @@ export function GuidedTour() {
         if (!el) return;
 
         const rect = el.getBoundingClientRect();
-        const tooltipW = 340;
+        const tooltipW = Math.min(340, window.innerWidth - 24);
         const tooltipH = tooltipRef.current?.offsetHeight || 180;
         const gap = 14;
         const dir = step.placement || "bottom";
@@ -314,9 +460,56 @@ export function GuidedTour() {
         });
     }, [currentStep, steps]);
 
-    // Highlight & scroll to element
     useEffect(() => {
-        if (!isRunning || !steps[currentStep]) return;
+        if (!isRunning || !steps[currentStep] || window.innerWidth >= 1024) return;
+
+        const target = steps[currentStep].target;
+        const needsMobileNavigation =
+            target === "[data-tour='sidebar']" ||
+            target === "[data-tour='logout']" ||
+            target.startsWith("[data-tour='nav-");
+
+        window.dispatchEvent(
+            new CustomEvent<boolean>(ADMIN_MOBILE_NAV_EVENT, {
+                detail: needsMobileNavigation,
+            }),
+        );
+
+        return () => {
+            if (needsMobileNavigation) {
+                window.dispatchEvent(
+                    new CustomEvent<boolean>(ADMIN_MOBILE_NAV_EVENT, { detail: false }),
+                );
+            }
+        };
+    }, [currentStep, isRunning, steps]);
+
+    // Highlight & scroll to element
+  useEffect(() => {
+    if (!isRunning || !steps[currentStep]) return;
+
+    const target = steps[currentStep].target;
+    const needsMembersTab =
+      target === "[data-tour='dept-add-member']" ||
+      target === "[data-tour='dept-add-team']" ||
+      target === "[data-tour='member-actions']";
+
+    if (!needsMembersTab) return;
+
+    const membersTab = document.querySelector(
+      "[data-tour='dept-tabs'] button:last-of-type",
+    ) as HTMLButtonElement | null;
+    membersTab?.click();
+
+    const timer = window.setTimeout(() => {
+      setTargetVersion((version) => version + 1);
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [currentStep, isRunning, steps]);
+
+  useEffect(() => {
+    if (!isRunning || !steps[currentStep]) return;
 
         const step = steps[currentStep];
         const el = document.querySelector(step.target) as HTMLElement | null;
@@ -357,9 +550,12 @@ export function GuidedTour() {
             clearTimeout(timer);
             window.removeEventListener("resize", positionTooltip);
         };
-    }, [isRunning, currentStep, positionTooltip, steps]);
+  }, [isRunning, currentStep, positionTooltip, steps, targetVersion]);
 
     const endTour = useCallback(() => {
+        window.dispatchEvent(
+            new CustomEvent<boolean>(ADMIN_MOBILE_NAV_EVENT, { detail: false }),
+        );
         setIsRunning(false);
         setCurrentStep(0);
         localStorage.setItem(TOUR_STORAGE_KEY, "true");

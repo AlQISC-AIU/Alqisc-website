@@ -94,7 +94,7 @@ export function TeamCarousel({
       ref={sectionRef}
       className="overflow-x-clip bg-[var(--light)] py-20 md:py-24 lg:py-28"
     >
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+      <div className="container mx-auto min-w-0 px-5 sm:px-6 lg:px-8">
         {/* Header */}
         <div
           className={cn(
@@ -124,21 +124,21 @@ export function TeamCarousel({
           {/* Navigation Buttons */}
           <button
             onClick={goToPrevious}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[var(--primary)] hover:text-white transition-colors"
+            className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lg transition-colors hover:bg-[var(--primary)] hover:text-white sm:h-12 sm:w-12 md:-translate-x-4"
             aria-label="Previous"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[var(--primary)] hover:text-white transition-colors"
+            className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lg transition-colors hover:bg-[var(--primary)] hover:text-white sm:h-12 sm:w-12 md:translate-x-4"
             aria-label="Next"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
 
           {/* Carousel Track */}
-          <div className="overflow-hidden mx-8">
+          <div className="mx-7 min-w-0 overflow-hidden sm:mx-8">
             <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{
@@ -148,7 +148,7 @@ export function TeamCarousel({
               {members.map((member, index) => (
                 <div
                   key={index}
-                  className="flex-shrink-0 px-3"
+                  className="min-w-0 flex-shrink-0 px-2 sm:px-3"
                   style={{ width: `${100 / itemsPerView}%` }}
                 >
                   <div className="bg-[#f0f0f0] rounded-2xl overflow-hidden team-item shadow-lg">
@@ -165,12 +165,12 @@ export function TeamCarousel({
 
                     {/* Profile Image */}
                     <div className="relative -mt-20 flex justify-center">
-                      <div className="relative w-44 h-44 rounded-full overflow-hidden ring-[5px] ring-[var(--secondary)] bg-white">
+                      <div className="relative h-36 w-36 overflow-hidden rounded-full bg-white ring-[5px] ring-[var(--secondary)] sm:h-44 sm:w-44">
                         <Image
                           src={member.image}
                           alt={member.name}
                           fill
-                          sizes="176px"
+                          sizes="(max-width: 639px) 144px, 176px"
                           className="object-cover"
                         />
                       </div>
@@ -186,7 +186,7 @@ export function TeamCarousel({
                       </p>
 
                       {/* Social Links */}
-                      <div className="flex justify-center gap-3">
+                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                         {member.facebook && (
                           <a
                             href={member.facebook}

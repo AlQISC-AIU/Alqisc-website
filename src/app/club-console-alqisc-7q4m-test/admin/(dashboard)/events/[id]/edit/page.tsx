@@ -214,7 +214,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                     <span className="text-[var(--gray)]">Edit Event</span>
                 </div>
 
-                <form onSubmit={handleSubmit} className="max-w-5xl">
+            <form data-tour="event-form" onSubmit={handleSubmit} className="max-w-5xl">
                     <div className="grid lg:grid-cols-3 gap-6">
                         {/* Left Column */}
                         <div className="lg:col-span-2 space-y-5">

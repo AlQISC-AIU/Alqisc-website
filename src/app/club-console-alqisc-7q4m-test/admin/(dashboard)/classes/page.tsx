@@ -102,7 +102,7 @@ export default function ClassesPage() {
         <>
             <AdminTopbar title="Classes" />
 
-            <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div data-tour="class-list" className="flex-1 p-4 sm:p-6 lg:p-8">
                 {errorMessage && (
                     <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         <span>{errorMessage}</span>

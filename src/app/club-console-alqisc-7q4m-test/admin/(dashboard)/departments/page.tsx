@@ -156,7 +156,7 @@ export default function DepartmentsPage() {
                         <p className="text-[var(--gray)]">No departments found.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div data-tour="department-list" className="space-y-3">
                         {departments.map((dept) => {
                             const isExpanded = expandedDept === dept.slug;
 

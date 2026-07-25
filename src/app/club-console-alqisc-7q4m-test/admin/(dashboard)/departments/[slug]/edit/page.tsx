@@ -675,7 +675,13 @@ export default function EditDepartmentPage({ params }: { params: Promise<{ slug:
                                 <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                                     <h3 className="font-heading text-base sm:text-lg font-bold text-[var(--dark)] flex items-center gap-2">
                                         {team.title}
-                                        <button onClick={() => handleDeleteTeam(team.id)} className="text-gray-400 hover:text-red-500 opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity" title="Delete Team">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteTeam(team.id)}
+                                            className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+                                            title="Delete Team"
+                                            aria-label={`Delete ${team.title} team`}
+                                        >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </h3>
@@ -697,7 +703,7 @@ export default function EditDepartmentPage({ params }: { params: Promise<{ slug:
                                             return (
                                                 <div
                                                     key={member.id}
-                                                    className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 group hover:border-[var(--primary)]/20 hover:shadow-md transition-all"
+                                                    className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-4 pb-16 shadow-sm transition-all hover:border-[var(--primary)]/20 hover:shadow-md sm:pb-4"
                                                 >
                                                     <div className="flex items-start gap-3">
                                                         {/* Photo */}
@@ -741,18 +747,27 @@ export default function EditDepartmentPage({ params }: { params: Promise<{ slug:
                                                         </div>
 
                                                         {/* Actions */}
-                                                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div
+                                                            data-tour="member-actions"
+                                                            className="absolute bottom-3 right-3 flex gap-2 opacity-100 transition-opacity sm:static sm:flex-col sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                                                        >
                                                             <button
+                                                                type="button"
                                                                 onClick={() => openEditMember(member)}
-                                                                className="p-1.5 text-[var(--gray)] hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-lg transition-colors"
+                                                                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)]/10 px-3 text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] sm:min-w-9 sm:bg-transparent sm:px-1.5 sm:text-[var(--gray)]"
+                                                                aria-label={`Edit ${member.name}`}
                                                             >
                                                                 <Edit3 className="w-3.5 h-3.5" />
+                                                                <span className="text-xs font-semibold sm:sr-only">Edit</span>
                                                             </button>
                                                             <button
+                                                                type="button"
                                                                 onClick={() => handleDeleteMember(member)}
-                                                                className="p-1.5 text-[var(--gray)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-red-50 px-3 text-red-600 transition-colors hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] sm:min-w-9 sm:bg-transparent sm:px-1.5 sm:text-[var(--gray)] sm:hover:bg-red-50 sm:hover:text-red-500"
+                                                                aria-label={`Delete ${member.name}`}
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
+                                                                <span className="text-xs font-semibold sm:sr-only">Delete</span>
                                                             </button>
                                                         </div>
                                                     </div>
@@ -769,20 +784,20 @@ export default function EditDepartmentPage({ params }: { params: Promise<{ slug:
                         ))}
 
                         {/* Add New Team Section */}
-                        <div className="mt-8 p-5 bg-white rounded-2xl border border-dashed border-gray-300">
+                        <div data-tour="dept-add-team" className="mt-8 rounded-2xl border border-dashed border-gray-300 bg-white p-5">
                             <h4 className="text-sm font-semibold text-[var(--dark)] mb-3">Add New Team</h4>
-                            <div className="flex gap-3 max-w-sm">
+                            <div className="flex max-w-sm flex-col gap-3 sm:flex-row">
                                 <input
                                     type="text"
                                     value={newTeamTitle}
                                     onChange={(e) => setNewTeamTitle(e.target.value)}
                                     placeholder="e.g. Core Team"
-                                    className="flex-1 px-4 py-2.5 bg-[var(--light)] border border-gray-200 rounded-xl text-sm text-[var(--dark)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all"
+                                    className="min-w-0 flex-1 px-4 py-2.5 bg-[var(--light)] border border-gray-200 rounded-xl text-sm text-[var(--dark)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all"
                                 />
                                 <button
                                     onClick={handleAddTeam}
                                     disabled={!newTeamTitle.trim() || isAddingTeam}
-                                    className="px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-50 flex items-center gap-2"
+                                    className="flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-dark)] disabled:opacity-50"
                                 >
                                     {isAddingTeam ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                     Add

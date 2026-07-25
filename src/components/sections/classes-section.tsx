@@ -72,15 +72,15 @@ export function ClassesSection({ classes }: ClassesSectionProps) {
 
         <div
           className={cn(
-            "grid gap-7 transition-all delay-200 duration-500 motion-reduce:transform-none motion-reduce:transition-none lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8",
+            "grid min-w-0 gap-7 transition-all delay-200 duration-500 motion-reduce:transform-none motion-reduce:transition-none lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8",
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-10"
           )}
         >
-          <div>
+          <div className="min-w-0">
             <div
-              className="flex gap-3 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0"
+              className="flex w-full min-w-0 max-w-full gap-3 overflow-x-auto overscroll-x-contain pb-2 lg:flex-col lg:overflow-visible lg:pb-0"
               role="group"
               aria-label="Available classes"
             >
@@ -113,11 +113,11 @@ export function ClassesSection({ classes }: ClassesSectionProps) {
             id={`class-panel-${activeClass.id}`}
             aria-live="polite"
             aria-atomic="true"
-            className="class-panel-enter rounded-2xl border border-[var(--primary)]/10 bg-[var(--light)] p-5 sm:p-6 lg:p-7"
+            className="class-panel-enter min-w-0 rounded-2xl border border-[var(--primary)]/10 bg-[var(--light)] p-5 sm:p-6 lg:p-7"
           >
-            <div className="grid gap-7 md:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.1fr)] md:items-center lg:gap-9">
-              <div>
-                <div className="relative aspect-[4/5] max-h-[480px] overflow-hidden rounded-xl bg-white shadow-sm">
+            <div className="grid min-w-0 gap-7 md:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.1fr)] md:items-center lg:gap-9">
+              <div className="min-w-0">
+                <div className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-xl bg-white shadow-sm md:max-h-[480px]">
                   <Image
                     src={activeClass.image}
                     alt={activeClass.title}
@@ -128,7 +128,7 @@ export function ClassesSection({ classes }: ClassesSectionProps) {
                 </div>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--primary)]">
                   Class Overview
                 </p>

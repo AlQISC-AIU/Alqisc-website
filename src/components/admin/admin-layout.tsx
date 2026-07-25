@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
     ADMIN_DASHBOARD_PATH,
     ADMIN_LOGIN_PATH,
+    ADMIN_MOBILE_NAV_EVENT,
     adminPath,
 } from "@/lib/admin-routes";
 import {
@@ -48,6 +49,15 @@ export function AdminSidebar() {
             const body = (await response.json()) as { profile: { isPrimary?: boolean } };
             setIsPrimary(body.profile.isPrimary === true);
         })();
+    }, []);
+
+    useEffect(() => {
+        const handleTourNavigation = (event: Event) => {
+            setIsMobileOpen((event as CustomEvent<boolean>).detail);
+        };
+
+        window.addEventListener(ADMIN_MOBILE_NAV_EVENT, handleTourNavigation);
+        return () => window.removeEventListener(ADMIN_MOBILE_NAV_EVENT, handleTourNavigation);
     }, []);
 
     return (
