@@ -26,6 +26,17 @@ npm run build
 
 Environment configuration is required locally and on the deployment platform. Private configuration values must not be committed to the repository.
 
+For correct canonical links, social previews, and sitemap URLs, configure:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://your-production-domain.example
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=verification-token-from-search-console
+```
+
+After deployment, add the production domain in Google Search Console and submit
+`https://your-production-domain.example/sitemap.xml`. Google has retired its old
+sitemap ping endpoint, so Search Console is the supported submission method.
+
 ## Status
 
 This project is under active development.

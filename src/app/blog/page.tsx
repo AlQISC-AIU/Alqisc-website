@@ -6,9 +6,10 @@ import { InnerPageHero } from "@/components/sections/inner-page-hero";
 import { getPublishedPosts } from "@/lib/firebase/blog";
 
 export const metadata: Metadata = {
-  title: "Blog | Al-QIsc Club",
+  title: "Islamic Articles & News",
   description:
     "Read the latest articles and insights from Al-Qisc Club on Islamic knowledge, Quranic studies, and spiritual growth.",
+  alternates: { canonical: "/blog" },
 };
 
 const fivePillars = [

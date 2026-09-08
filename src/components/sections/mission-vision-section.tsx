@@ -44,7 +44,7 @@ export function MissionVisionSection({ missionText, visionText }: MissionVisionP
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-white/85" />
+        <div className="absolute inset-0 bg-[#eaf3ff]/55" />
       </div>
 
       <div className="container relative z-10 mx-auto px-5 sm:px-6 lg:px-8">
@@ -75,10 +75,7 @@ export function MissionVisionSection({ missionText, visionText }: MissionVisionP
                 : "opacity-0 translate-y-10"
             )}
           >
-            <i
-              className="fas fa-seedling mx-auto mb-5 text-6xl leading-none text-[var(--primary)] md:text-7xl"
-              aria-hidden="true"
-            />
+            <i className="fas fa-seedling mx-auto mb-5 text-6xl leading-none text-[var(--primary)] md:text-7xl" aria-hidden="true" />
             <h3 className="font-heading text-2xl font-bold text-[var(--dark)] mb-4">
               Mission
             </h3>
@@ -96,10 +93,7 @@ export function MissionVisionSection({ missionText, visionText }: MissionVisionP
                 : "opacity-0 translate-y-10"
             )}
           >
-            <i
-              className="fas fa-dove mx-auto mb-5 text-6xl leading-none text-[var(--primary)] md:text-7xl"
-              aria-hidden="true"
-            />
+            <i className="fas fa-dove mx-auto mb-5 text-6xl leading-none text-[var(--primary)] md:text-7xl" aria-hidden="true" />
             <h3 className="font-heading text-2xl font-bold text-[var(--dark)] mb-4">
               Vision
             </h3>

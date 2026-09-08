@@ -28,6 +28,7 @@ import { createClient } from "@/lib/firebase/client";
 import { uploadImageAction, deleteImageAction } from "@/lib/firebase/storage";
 import type { Department, Team, Member } from "@/lib/firebase/types";
 import { notifications } from "@/components/ui/notification-provider";
+import { getUniqueMemberCount } from "@/lib/member-identity";
 
 // Extended types for the nested structure
 type MemberWithTeam = Member;
@@ -522,7 +523,7 @@ export default function EditDepartmentPage({ params }: { params: Promise<{ slug:
                             : "text-[var(--gray)] hover:text-[var(--dark)] hover:bg-gray-50"
                             }`}
                     >
-                        Members ({dept.teams.reduce((a, t) => a + (t.members?.length || 0), 0)})
+                        Members ({getUniqueMemberCount(dept.teams)})
                     </button>
                 </div>
 

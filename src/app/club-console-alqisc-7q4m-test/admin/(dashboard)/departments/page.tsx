@@ -17,6 +17,7 @@ import {
 import { createClient } from "@/lib/firebase/client";
 import type { Department, Team, Member } from "@/lib/firebase/types";
 import { notifications } from "@/components/ui/notification-provider";
+import { getUniqueMemberCount } from "@/lib/member-identity";
 
 // Extended types for the nested structure
 type MemberWithTeam = Member;
@@ -117,7 +118,7 @@ export default function DepartmentsPage() {
     };
 
     const getTotalMembers = (dept: DepartmentWithNested) => {
-        return dept.teams?.reduce((acc, t) => acc + (t.members?.length || 0), 0) || 0;
+        return getUniqueMemberCount(dept.teams || []);
     };
 
     return (

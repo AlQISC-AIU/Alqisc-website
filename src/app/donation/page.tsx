@@ -82,7 +82,7 @@ export default function DonationPage() {
                       src={donationQr}
                       alt="Touch 'n Go donation QR code"
                       width={248}
-                      height={248}
+                      height={384}
                       className="h-auto w-[220px] sm:w-[248px]"
                     />
                   </div>

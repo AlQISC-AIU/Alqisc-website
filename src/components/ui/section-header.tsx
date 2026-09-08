@@ -28,7 +28,7 @@ export function SectionHeader({
   return (
     <div
       className={cn(
-        "max-w-2xl pb-8 animate-on-scroll",
+        "max-w-2xl pb-8",
         alignmentClasses[align],
         className
       )}

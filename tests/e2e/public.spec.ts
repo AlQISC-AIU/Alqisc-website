@@ -12,8 +12,8 @@ test("public navigation and primary pages render without browser errors @respons
     expect(errors).toEqual([]);
 });
 
-test("inner pages keep their hero content centered without horizontal overflow @responsive", async ({ page }) => {
-    for (const path of ["/about", "/blog", "/classes", "/contact", "/donation", "/events"]) {
+test("standard inner pages keep their hero content centered without horizontal overflow @responsive", async ({ page }) => {
+    for (const path of ["/blog", "/classes", "/contact", "/donation", "/events"]) {
         await page.goto(path);
 
         const heading = page.getByRole("heading", { level: 1 });
@@ -36,6 +36,36 @@ test("inner pages keep their hero content centered without horizontal overflow @
         );
         expect(hasHorizontalOverflow, `${path} horizontal overflow`).toBe(false);
     }
+});
+
+test("about page renders the branded hero and opens the ICT directory first @responsive", async ({ page }) => {
+    await page.goto("/about");
+
+    const hero = page.getByRole("heading", { level: 1, name: "About AL-QISC" }).locator("xpath=ancestor::section[1]");
+    await expect(hero).toBeVisible();
+    await expect(hero.locator("svg.pointer-events-none")).toHaveCount(1);
+
+    const selectedTab = page.getByRole("tab", { selected: true });
+    await expect(selectedTab).toHaveText("ICT");
+    await expect(page.getByText("Committee members", { exact: true })).toHaveCount(0);
+
+    const selectedTabIsFullyVisible = await selectedTab.evaluate((element) => {
+        const tabBounds = element.getBoundingClientRect();
+        const scrollerBounds = element.parentElement?.parentElement?.getBoundingClientRect();
+        return Boolean(
+            scrollerBounds &&
+            tabBounds.left >= scrollerBounds.left &&
+            tabBounds.right <= scrollerBounds.right &&
+            tabBounds.top >= scrollerBounds.top &&
+            tabBounds.bottom <= scrollerBounds.bottom
+        );
+    });
+    expect(selectedTabIsFullyVisible).toBe(true);
+
+    const hasHorizontalOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(hasHorizontalOverflow).toBe(false);
 });
 
 test("blog recent posts heading and about image composition are centered", async ({ page }) => {

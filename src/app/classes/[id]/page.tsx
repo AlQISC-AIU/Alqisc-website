@@ -1,17 +1,34 @@
 import { getClassById, getClassBySlug } from "@/lib/firebase/classes";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, Users, MapPin, ArrowLeft, ArrowRight, Target, CheckCircle2 } from "lucide-react";
 import { notFound } from "next/navigation";
+import { cache } from "react";
+
+const getClass = cache((id: string) =>
+  getClassBySlug(id).catch(() => getClassById(id)).catch(() => null),
+);
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const classItem = await getClass(id);
+
+  if (!classItem) return { title: "Class Not Found" };
+  return {
+    title: classItem.title,
+    description: classItem.description,
+    alternates: { canonical: `/classes/${classItem.slug || classItem.id}` },
+    openGraph: classItem.image_url ? { images: [classItem.image_url] } : undefined,
+  };
+}
 
 export default async function ClassDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   if (!id) notFound();
 
-  const classItem = await getClassBySlug(id)
-    .catch(() => getClassById(id))
-    .catch(() => null);
+  const classItem = await getClass(id);
 
   if (!classItem || !classItem.is_active) notFound();
 

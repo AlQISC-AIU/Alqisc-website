@@ -5,6 +5,7 @@ import { ArrowRight, Check, Target, Users } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
 import { DepartmentTeamCarousel } from "@/components/sections/department-team-carousel";
 import { getActiveDepartments, getDepartmentBySlug } from "@/lib/firebase/departments";
+import { getUniqueMemberCount } from "@/lib/member-identity";
 import type { Member } from "@/lib/firebase/types";
 
 interface PageProps {
@@ -25,14 +26,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const department = await getDepartmentBySlug(slug);
-    if (!department) return { title: "Department Not Found | Al-QIsc Club" };
+    if (!department) return { title: "Department Not Found" };
 
     return {
-      title: `${department.full_name || department.name} | Al-QIsc Club`,
+      title: department.full_name || department.name,
       description: department.description,
+      alternates: { canonical: `/departments/${department.slug}` },
     };
   } catch {
-    return { title: "Department Not Found | Al-QIsc Club" };
+    return { title: "Department Not Found" };
   }
 }
 
@@ -51,7 +53,7 @@ export default async function DepartmentPage({ params }: PageProps) {
   if (!department) notFound();
 
   const teams = department.teams?.filter((team) => team.members?.length) || [];
-  const memberCount = teams.reduce((total, team) => total + (team.members?.length || 0), 0);
+  const memberCount = getUniqueMemberCount(teams);
 
   return (
     <>

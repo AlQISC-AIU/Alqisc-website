@@ -11,6 +11,11 @@ import { getFeaturedEvents, getEvents } from "@/lib/firebase/events";
 import { getClasses } from "@/lib/firebase/classes";
 import { getDepartmentBySlug } from "@/lib/firebase/departments";
 import { getSettings } from "@/lib/firebase/settings";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 // Gallery images from Events - matching old website's carousel
 const galleryImages = [

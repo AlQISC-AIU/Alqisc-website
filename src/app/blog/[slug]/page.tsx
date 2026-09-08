@@ -15,15 +15,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const post = await getPostBySlug(slug);
-    if (!post) return { title: "Post Not Found | Al-QIsc Club" };
+    if (!post) return { title: "Post Not Found" };
 
     return {
-      title: `${post.title} | Al-QIsc Club Blog`,
+      title: post.title,
       description: post.excerpt || "Read this article on the Al-QIsc Club blog.",
       openGraph: post.featured_image_url ? { images: [post.featured_image_url] } : undefined,
+      alternates: { canonical: `/blog/${post.slug}` },
     };
   } catch {
-    return { title: "Blog Post | Al-QIsc Club" };
+    return { title: "Blog Post" };
   }
 }
 

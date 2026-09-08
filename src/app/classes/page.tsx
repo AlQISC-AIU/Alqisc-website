@@ -5,9 +5,10 @@ import { InnerPageHero } from "@/components/sections/inner-page-hero";
 import { getClasses } from "@/lib/firebase/classes";
 
 export const metadata = {
-  title: "Classes | Al-QIsc Club",
+  title: "Qur'an & Islamic Classes",
   description:
     "Join our Islamic education classes including Arabic Language, Quran Reading, Hafazan Program, and Kids Academy.",
+  alternates: { canonical: "/classes" },
 };
 
 export default async function ClassesPage() {

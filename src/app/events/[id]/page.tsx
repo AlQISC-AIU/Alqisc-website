@@ -1,14 +1,31 @@
 import { getEventById } from "@/lib/firebase/events";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { notFound } from "next/navigation";
+import { cache } from "react";
+
+const getEvent = cache(getEventById);
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const event = await getEvent(id).catch(() => null);
+
+  if (!event) return { title: "Event Not Found" };
+  return {
+    title: event.title,
+    description: event.description,
+    alternates: { canonical: `/events/${event.id}` },
+    openGraph: event.image_url ? { images: [event.image_url] } : undefined,
+  };
+}
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!id) notFound();
 
-  const event = await getEventById(id).catch(() => null);
+  const event = await getEvent(id).catch(() => null);
   if (!event) notFound();
 
   const eventDate = new Date(event.date);
