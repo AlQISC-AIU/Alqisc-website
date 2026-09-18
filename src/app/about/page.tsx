@@ -36,7 +36,7 @@ export default async function AboutPage() {
 
   return (
     <>
-      <section className="relative isolate min-h-[500px] overflow-hidden bg-[#184c65] sm:min-h-[550px]">
+      <section className="relative isolate grid min-h-[520px] place-items-center overflow-hidden bg-[var(--primary)] px-5 pb-20 pt-16 sm:min-h-[580px] sm:px-6 sm:pb-24 lg:min-h-[620px] lg:px-8">
         <Image
           src="/images/backround.JPG"
           alt="AL-QISC student community at Albukhary International University"
@@ -68,12 +68,16 @@ export default async function AboutPage() {
           </div>
         </div>
         <svg
-          className="pointer-events-none absolute -bottom-px left-0 h-16 w-full sm:h-20"
-          viewBox="0 0 1440 90"
+          className="pointer-events-none absolute -bottom-px left-0 h-[140px] w-full sm:h-[180px]"
+          viewBox="0 0 1440 180"
           preserveAspectRatio="none"
+          shapeRendering="geometricPrecision"
           aria-hidden="true"
         >
-          <path d="M0 34C365 4 735 80 1440 48V90H0Z" fill="white" />
+          <path
+            d="M0 92 C180 70 350 30 520 38 C690 46 820 136 1030 142 C1240 148 1350 116 1440 92 V180 H0 Z"
+            fill="white"
+          />
         </svg>
       </section>
 

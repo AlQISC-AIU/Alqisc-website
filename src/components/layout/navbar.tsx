@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Department } from "@/lib/firebase/types";
@@ -34,6 +35,7 @@ function buildNavigation(departments: Department[]): NavItem[] {
 }
 
 export function Navbar({ departments = [] }: { settings?: Record<string, string>; departments?: Department[] }) {
+  const pathname = usePathname();
   const navigation = buildNavigation(departments);
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,13 +50,19 @@ export function Navbar({ departments = [] }: { settings?: Record<string, string>
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const isItemActive = (item: NavItem) => {
+    if (item.children) return pathname.startsWith("/departments/");
+    if (item.href === "/") return pathname === "/";
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  };
+
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 border-b border-white/10 backdrop-blur-md transition-all duration-300",
         isScrolled
-          ? "bg-[var(--primary)] shadow-lg"
-          : "bg-[var(--primary)]"
+          ? "bg-[var(--primary)]/95 shadow-lg"
+          : "bg-[var(--primary)]/88"
       )}
     >
       <div className="container mx-auto px-4">
@@ -96,7 +104,12 @@ export function Navbar({ departments = [] }: { settings?: Record<string, string>
                 {item.children ? (
                   <>
                     <button
-                      className="flex items-center gap-1 px-4 py-2 text-white hover:text-[var(--secondary)] transition-colors font-medium"
+                      className={cn(
+                        "flex items-center gap-1 rounded-md border px-4 py-2 font-medium text-white transition-all hover:border-white/50 hover:bg-white/10 hover:text-white",
+                        isItemActive(item)
+                          ? "border-white/90 bg-white/10 shadow-sm"
+                          : "border-transparent",
+                      )}
                       onMouseEnter={() => setActiveDropdown(item.name)}
                       onMouseLeave={() => setActiveDropdown(null)}
                       onFocus={() => setActiveDropdown(item.name)}
@@ -136,7 +149,13 @@ export function Navbar({ departments = [] }: { settings?: Record<string, string>
                 ) : (
                   <Link
                     href={item.href}
-                    className="px-4 py-2 text-white hover:text-[var(--secondary)] transition-colors font-medium"
+                    aria-current={isItemActive(item) ? "page" : undefined}
+                    className={cn(
+                      "rounded-md border px-4 py-2 font-medium text-white transition-all hover:border-white/50 hover:bg-white/10 hover:text-white",
+                      isItemActive(item)
+                        ? "border-white/90 bg-white/10 shadow-sm"
+                        : "border-transparent",
+                    )}
                   >
                     {item.name}
                   </Link>
@@ -170,7 +189,10 @@ export function Navbar({ departments = [] }: { settings?: Record<string, string>
                 {item.children ? (
                   <>
                     <button
-                      className="flex items-center justify-between w-full px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors"
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-white transition-colors hover:bg-white/10",
+                        isItemActive(item) ? "border-white/70 bg-white/10" : "border-transparent",
+                      )}
                       onClick={() =>
                         setActiveDropdown(
                           activeDropdown === item.name ? null : item.name
@@ -208,7 +230,11 @@ export function Navbar({ departments = [] }: { settings?: Record<string, string>
                 ) : (
                   <Link
                     href={item.href}
-                    className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors"
+                    aria-current={isItemActive(item) ? "page" : undefined}
+                    className={cn(
+                      "block rounded-lg border px-4 py-3 text-white transition-colors hover:bg-white/10",
+                      isItemActive(item) ? "border-white/70 bg-white/10" : "border-transparent",
+                    )}
                     onClick={() => setIsOpen(false)}
                   >
                     {item.name}
