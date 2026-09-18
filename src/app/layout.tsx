@@ -11,6 +11,8 @@ import { getSiteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
+const siteUrl = getSiteUrl();
+
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
@@ -34,7 +36,7 @@ const amiri = Amiri({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "AL-QISC | AIU Al-Qur'an & Islamic Club",
     template: "%s | AL-QISC",
@@ -81,9 +83,21 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
-  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
-    : undefined,
+  verification: {
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+      : {}),
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { other: { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
+      : {}),
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icon.png", sizes: "192x192", type: "image/png" }],
+  },
   manifest: "/manifest.webmanifest",
 };
 
@@ -102,13 +116,30 @@ export default async function RootLayout({
     getSettings(),
     getActiveDepartments().catch(() => []),
   ]);
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    url: `${siteUrl}/`,
+    name: "AL-QISC",
+    alternateName: ["Al-Qur'an and Islamic Club", "AIU AL-QISC"],
+    description: "The official Al-Qur'an and Islamic Club at Albukhary International University.",
+    publisher: { "@id": `${siteUrl}/#organization` },
+    inLanguage: "en-MY",
+  };
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${siteUrl}/#organization`,
     name: "AL-QISC — Al-Qur'an and Islamic Club",
-    alternateName: "AL-QISC",
-    url: getSiteUrl(),
-    logo: `${getSiteUrl()}/images/logo.png`,
+    alternateName: ["AL-QISC", "AIU AL-QISC"],
+    url: `${siteUrl}/`,
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteUrl}/images/logo.png`,
+      width: 190,
+      height: 189,
+    },
     description: "The official Al-Qur'an and Islamic Club at Albukhary International University.",
     email: settings.contact_email || "alqiscpersonal@gmail.com",
     telephone: settings.contact_phone || "+60177316088",
@@ -146,6 +177,10 @@ export default async function RootLayout({
         className={`${manrope.variable} ${cormorant.variable} ${amiri.variable} antialiased`}
         suppressHydrationWarning
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema).replace(/</g, "\\u003c") }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c") }}

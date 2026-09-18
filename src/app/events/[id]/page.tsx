@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Calendar, MapPin, ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { getSiteUrl } from "@/lib/site-url";
 
 const getEvent = cache(getEventById);
 
@@ -13,11 +14,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const event = await getEvent(id).catch(() => null);
 
   if (!event) return { title: "Event Not Found" };
+  const description = event.description || `Event hosted by AL-QISC at Albukhary International University.`;
   return {
     title: event.title,
-    description: event.description,
+    description,
     alternates: { canonical: `/events/${event.id}` },
-    openGraph: event.image_url ? { images: [event.image_url] } : undefined,
+    openGraph: {
+      type: "website",
+      url: `/events/${event.id}`,
+      title: event.title,
+      description,
+      images: event.image_url ? [{ url: event.image_url, alt: event.title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+      images: event.image_url ? [event.image_url] : [],
+    },
   };
 }
 
@@ -27,6 +41,38 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   const event = await getEvent(id).catch(() => null);
   if (!event) notFound();
+
+  const siteUrl = getSiteUrl();
+  const eventSchema = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    description: event.description,
+    startDate: event.date,
+    eventStatus: event.status === "cancelled"
+      ? "https://schema.org/EventCancelled"
+      : event.status === "upcoming"
+        ? "https://schema.org/EventScheduled"
+        : "https://schema.org/EventCompleted",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    url: `${siteUrl}/events/${event.id}`,
+    image: event.image_url ? [event.image_url] : undefined,
+    location: {
+      "@type": "Place",
+      name: event.location || "Albukhary International University",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Alor Setar",
+        addressRegion: "Kedah",
+        addressCountry: "MY",
+      },
+    },
+    organizer: {
+      "@type": "Organization",
+      name: "AL-QISC",
+      url: `${siteUrl}/`,
+    },
+  };
 
   const eventDate = new Date(event.date);
   const formattedDate = Number.isNaN(eventDate.getTime())
@@ -45,6 +91,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <main className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema).replace(/</g, "\\u003c") }}
+      />
       <section className="bg-[var(--light)] pb-14 pt-32 md:pb-16 md:pt-36">
         <div className="container mx-auto px-5 sm:px-6 lg:px-8">
           <Link

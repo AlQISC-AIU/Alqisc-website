@@ -1,12 +1,12 @@
-const localUrl = "http://localhost:3000";
+const productionUrl = "https://www.alqisc.com";
 
 export function getSiteUrl() {
-  const configuredUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-    process.env.VERCEL_URL;
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL || productionUrl;
 
-  if (!configuredUrl) return localUrl;
   const url = configuredUrl.startsWith("http") ? configuredUrl : `https://${configuredUrl}`;
-  return url.replace(/\/$/, "");
+  const normalizedUrl = url.replace(/\/$/, "");
+
+  // Search metadata should always identify the public custom domain, including
+  // on Vercel preview and project-domain deployments.
+  return normalizedUrl.includes(".vercel.app") ? productionUrl : normalizedUrl;
 }

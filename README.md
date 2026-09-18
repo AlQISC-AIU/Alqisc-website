@@ -29,8 +29,9 @@ Environment configuration is required locally and on the deployment platform. Pr
 For correct canonical links, social previews, and sitemap URLs, configure:
 
 ```bash
-NEXT_PUBLIC_SITE_URL=https://your-production-domain.example
+NEXT_PUBLIC_SITE_URL=https://www.alqisc.com
 NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=verification-token-from-search-console
+NEXT_PUBLIC_BING_SITE_VERIFICATION=verification-token-from-bing-webmaster-tools
 ```
 
 After deployment, add the production domain in Google Search Console and submit

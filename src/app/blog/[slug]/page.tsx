@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getPostBySlug } from "@/lib/firebase/blog";
 import { Calendar, User, ArrowLeft, ArrowRight, Tag } from "lucide-react";
 import { sanitizeRichText } from "@/lib/sanitize-rich-text";
+import { getSiteUrl } from "@/lib/site-url";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -17,10 +18,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const post = await getPostBySlug(slug);
     if (!post) return { title: "Post Not Found" };
 
+    const description = post.excerpt || "Read this article on the AL-QISC Club blog.";
     return {
       title: post.title,
-      description: post.excerpt || "Read this article on the Al-QIsc Club blog.",
-      openGraph: post.featured_image_url ? { images: [post.featured_image_url] } : undefined,
+      description,
+      openGraph: {
+        type: "article",
+        url: `/blog/${post.slug}`,
+        title: post.title,
+        description,
+        publishedTime: post.published_at || undefined,
+        modifiedTime: post.updated_at || undefined,
+        authors: [post.author || "AL-QISC Club"],
+        images: post.featured_image_url ? [{ url: post.featured_image_url, alt: post.title }] : [],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: post.title,
+        description,
+        images: post.featured_image_url ? [post.featured_image_url] : [],
+      },
       alternates: { canonical: `/blog/${post.slug}` },
     };
   } catch {
@@ -34,6 +51,31 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   if (!post || post.status !== "published") notFound();
 
+  const siteUrl = getSiteUrl();
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt || undefined,
+    image: post.featured_image_url ? [post.featured_image_url] : undefined,
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at || post.published_at || post.created_at,
+    mainEntityOfPage: `${siteUrl}/blog/${post.slug}`,
+    author: {
+      "@type": post.author ? "Person" : "Organization",
+      name: post.author || "AL-QISC Club",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "AL-QISC",
+      url: `${siteUrl}/`,
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteUrl}/images/logo.png`,
+      },
+    },
+  };
+
   const formattedDate = post.published_at
     ? new Date(post.published_at).toLocaleDateString("en-US", {
         year: "numeric",
@@ -44,6 +86,10 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema).replace(/</g, "\\u003c") }}
+      />
       <section className="relative flex min-h-[520px] items-end overflow-hidden pb-16 pt-32 md:min-h-[600px] md:pb-20 md:pt-36">
         {post.featured_image_url ? (
           <Image
