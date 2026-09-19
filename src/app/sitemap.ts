@@ -1,17 +1,21 @@
 import type { MetadataRoute } from "next";
-import { getPublishedPosts } from "@/lib/firebase/blog";
-import { getClasses } from "@/lib/firebase/classes";
-import { getActiveDepartments } from "@/lib/firebase/departments";
-import { getEvents } from "@/lib/firebase/events";
+import {
+  getCachedActiveClasses,
+  getCachedActiveDepartments,
+  getCachedEvents,
+  getCachedPublishedPosts,
+} from "@/lib/firebase/public-content";
 import { getSiteUrl } from "@/lib/site-url";
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
   const [departments, events, classes, posts] = await Promise.all([
-    getActiveDepartments().catch(() => []),
-    getEvents().catch(() => []),
-    getClasses({ active_only: true }).catch(() => []),
-    getPublishedPosts().catch(() => []),
+    getCachedActiveDepartments().catch(() => []),
+    getCachedEvents().catch(() => []),
+    getCachedActiveClasses().catch(() => []),
+    getCachedPublishedPosts().catch(() => []),
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [

@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Check, Target, Users } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
 import { DepartmentTeamCarousel } from "@/components/sections/department-team-carousel";
-import { getActiveDepartments, getDepartmentBySlug } from "@/lib/firebase/departments";
+import {
+  getCachedActiveDepartments,
+  getCachedDepartmentBySlug,
+} from "@/lib/firebase/public-content";
 import { getUniqueMemberCount } from "@/lib/member-identity";
 import type { Member } from "@/lib/firebase/types";
 
@@ -14,7 +17,7 @@ interface PageProps {
 
 export async function generateStaticParams() {
   try {
-    const departments = await getActiveDepartments();
+    const departments = await getCachedActiveDepartments();
     return departments.map((department) => ({ slug: department.slug }));
   } catch {
     return [];
@@ -25,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
 
   try {
-    const department = await getDepartmentBySlug(slug);
+    const department = await getCachedDepartmentBySlug(slug);
     if (!department) return { title: "Department Not Found" };
 
     return {
@@ -43,7 +46,7 @@ export default async function DepartmentPage({ params }: PageProps) {
   let department;
 
   try {
-    department = await getDepartmentBySlug(slug);
+    department = await getCachedDepartmentBySlug(slug);
     if (!department || department.is_active === false) notFound();
   } catch (error) {
     console.error("Error fetching department:", error);

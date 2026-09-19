@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Clock, Users, MapPin, ArrowRight, BookOpen } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
-import { getClasses } from "@/lib/firebase/classes";
+import { getCachedActiveClasses } from "@/lib/firebase/public-content";
 
 export const metadata = {
   title: "Qur'an & Islamic Classes",
@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 export default async function ClassesPage() {
-  const classes = await getClasses({ active_only: true });
+  const classes = await getCachedActiveClasses();
 
   return (
     <main className="bg-white">

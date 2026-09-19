@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
 import { Button } from "@/components/ui/button";
 import { notifications } from "@/components/ui/notification-provider";
-import { getSettings } from "@/lib/firebase/settings";
+import { useSiteSettings } from "@/components/layout/layout-shell";
 
 const fallbackAddress = "Albukhary International University\nJalan Tun Abdul Razak, 05200\nAlor Setar, Kedah Darul Aman, Malaysia";
 const fallbackPhone = "+60 17-731 6088";
@@ -16,11 +16,7 @@ const fallbackHours = "Sunday - Thursday: 9:00 AM - 5:00 PM";
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [settings, setSettings] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    getSettings().then(setSettings).catch(() => undefined);
-  }, []);
+  const settings = useSiteSettings();
 
   const address = settings.contact_address || fallbackAddress;
   const phone = settings.contact_phone || fallbackPhone;

@@ -1,4 +1,4 @@
-import { getEventById } from "@/lib/firebase/events";
+import { getCachedEventById } from "@/lib/firebase/public-content";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getSiteUrl } from "@/lib/site-url";
 
-const getEvent = cache(getEventById);
+const getEvent = cache(getCachedEventById);
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;

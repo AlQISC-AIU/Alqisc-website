@@ -4,8 +4,10 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, HandHeart, UsersRound } from "lucide-react";
 import { TeamDirectory } from "@/components/sections/team-directory";
 import { SectionHeader } from "@/components/ui/section-header";
-import { getActiveDepartments, getDepartmentBySlug } from "@/lib/firebase/departments";
-import { getSettings } from "@/lib/firebase/settings";
+import {
+  getCachedActiveDepartmentsWithTeams,
+  getCachedSettings,
+} from "@/lib/firebase/public-content";
 
 export const metadata: Metadata = {
   title: "About AL-QISC",
@@ -21,15 +23,10 @@ At Albukhary International University, AL-QISC creates welcoming opportunities f
 Through these programmes, we help students build knowledge, unity, and a deeper connection to Islam while serving the wider community.`;
 
 export default async function AboutPage() {
-  const [allDepartments, settings] = await Promise.all([
-    getActiveDepartments(),
-    getSettings().catch(() => ({} as Record<string, string>)),
+  const [departmentsWithTeams, settings] = await Promise.all([
+    getCachedActiveDepartmentsWithTeams(),
+    getCachedSettings().catch(() => ({} as Record<string, string>)),
   ]);
-  const departmentsWithTeams = await Promise.all(
-    allDepartments.map((department) =>
-      getDepartmentBySlug(department.slug).catch(() => department),
-    ),
-  );
   const executiveCommittee = departmentsWithTeams.find((department) => department.slug === "exco");
   const departments = departmentsWithTeams.filter((department) => department.slug !== "exco");
   const aboutImage = settings.about_image || "/images/committee1.jpg";

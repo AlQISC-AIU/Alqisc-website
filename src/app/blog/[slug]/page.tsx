@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getPostBySlug } from "@/lib/firebase/blog";
+import { getCachedPostBySlug } from "@/lib/firebase/public-content";
 import { Calendar, User, ArrowLeft, ArrowRight, Tag } from "lucide-react";
 import { sanitizeRichText } from "@/lib/sanitize-rich-text";
 import { getSiteUrl } from "@/lib/site-url";
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
 
   try {
-    const post = await getPostBySlug(slug);
+    const post = await getCachedPostBySlug(slug);
     if (!post) return { title: "Post Not Found" };
 
     const description = post.excerpt || "Read this article on the AL-QISC Club blog.";
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug).catch(() => null);
+  const post = await getCachedPostBySlug(slug).catch(() => null);
 
   if (!post || post.status !== "published") notFound();
 

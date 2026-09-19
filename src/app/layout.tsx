@@ -4,12 +4,9 @@ import type { Viewport } from "next";
 import "./globals.css";
 import { LayoutShell } from "@/components/layout/layout-shell";
 import { FirebaseAnalytics } from "@/components/firebase-analytics";
-import { getSettings } from "@/lib/firebase/settings";
-import { getActiveDepartments } from "@/lib/firebase/departments";
+import { getCachedActiveDepartments, getCachedSettings } from "@/lib/firebase/public-content";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import { getSiteUrl } from "@/lib/site-url";
-
-export const dynamic = "force-dynamic";
 
 const siteUrl = getSiteUrl();
 
@@ -113,8 +110,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const [settings, departments] = await Promise.all([
-    getSettings(),
-    getActiveDepartments().catch(() => []),
+    getCachedSettings(),
+    getCachedActiveDepartments().catch(() => []),
   ]);
   const websiteSchema = {
     "@context": "https://schema.org",

@@ -1,5 +1,5 @@
 ﻿import { createClient } from "./client";
-import type { Department, Team } from "./types";
+import type { Department, Member, Team } from "./types";
 
 // â”€â”€ GET ALL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function getDepartments() {
@@ -24,6 +24,50 @@ export async function getActiveDepartments() {
 
     if (error) throw error;
     return data as Department[];
+}
+
+// Fetch the full public department directory in three queries. This avoids the
+// previous department -> teams -> members N+1 query pattern on the About page.
+export async function getActiveDepartmentsWithTeams() {
+    const firebase = await createClient();
+    const [departmentsResult, teamsResult, membersResult] = await Promise.all([
+        firebase
+            .from("departments")
+            .select("*")
+            .eq("is_active", true)
+            .order("display_order", { ascending: true }),
+        firebase
+            .from("teams")
+            .select("*")
+            .order("display_order", { ascending: true }),
+        firebase
+            .from("members")
+            .select("*")
+            .order("display_order", { ascending: true }),
+    ]);
+
+    if (departmentsResult.error) throw departmentsResult.error;
+    if (teamsResult.error) throw teamsResult.error;
+    if (membersResult.error) throw membersResult.error;
+
+    const membersByTeam = new Map<string, Member[]>();
+    for (const member of membersResult.data as Member[]) {
+        const teamMembers = membersByTeam.get(member.team_id) || [];
+        teamMembers.push(member);
+        membersByTeam.set(member.team_id, teamMembers);
+    }
+
+    const teamsByDepartment = new Map<string, Team[]>();
+    for (const team of teamsResult.data as Team[]) {
+        const departmentTeams = teamsByDepartment.get(team.department_id) || [];
+        departmentTeams.push({ ...team, members: membersByTeam.get(team.id) || [] });
+        teamsByDepartment.set(team.department_id, departmentTeams);
+    }
+
+    return (departmentsResult.data as Department[]).map((department) => ({
+        ...department,
+        teams: teamsByDepartment.get(department.id) || [],
+    }));
 }
 
 // â”€â”€ GET BY SLUG (with teams & members) â”€â”€

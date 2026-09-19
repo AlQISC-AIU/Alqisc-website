@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
-import { getEvents } from "@/lib/firebase/events";
 import type { Event } from "@/lib/firebase/types";
 
 const filters = [
@@ -42,7 +41,9 @@ export default function EventsPage() {
     async function loadEvents() {
       try {
         setLoadError("");
-        setAllEvents(await getEvents());
+        const response = await fetch("/api/public/events");
+        if (!response.ok) throw new Error("Events could not be loaded.");
+        setAllEvents(await response.json() as Event[]);
       } catch (error) {
         console.error("Failed to load events", error);
         setLoadError("Events could not be loaded. Please refresh and try again.");

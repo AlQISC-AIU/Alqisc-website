@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getFirebaseAdminDb, verifyAdminSession } from "@/lib/firebase/admin";
 import { createClient } from "@/lib/firebase/server";
 import { withDefaults, withUpdateTimestamp } from "@/lib/firebase/client";
@@ -12,6 +13,16 @@ import { sanitizeRichText } from "@/lib/sanitize-rich-text";
 export const runtime = "nodejs";
 
 const ALLOWED_ACTIONS = new Set(["insert", "upsert", "update", "delete"]);
+
+const CACHE_TAGS_BY_COLLECTION: Record<ContentCollection, string[]> = {
+    departments: ["departments"],
+    teams: ["teams", "departments"],
+    members: ["members", "teams", "departments"],
+    events: ["events"],
+    classes: ["classes"],
+    blog_posts: ["blog-posts"],
+    site_settings: ["site-settings"],
+};
 
 type Filter = { field: string; operator: "==" | "!="; value: unknown };
 type MutationBody = {
@@ -109,6 +120,10 @@ export async function POST(request: Request) {
     if (result.error) {
         return NextResponse.json({ error: result.error.message }, { status: 400 });
     }
+    for (const tag of CACHE_TAGS_BY_COLLECTION[collection]) {
+        revalidateTag(tag, { expire: 0 });
+    }
+    revalidatePath("/sitemap.xml");
     return NextResponse.json({ data: result.data });
 }
 

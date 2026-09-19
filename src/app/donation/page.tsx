@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, Copy, HandHeart, Smartphone } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
-import { getSettings } from "@/lib/firebase/settings";
+import { useSiteSettings } from "@/components/layout/layout-shell";
 import { notifications } from "@/components/ui/notification-provider";
 
 const supportedPrograms = [
@@ -18,13 +17,7 @@ const supportedPrograms = [
 ];
 
 export default function DonationPage() {
-  const [settings, setSettings] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    getSettings()
-      .then((data) => setSettings(data))
-      .catch(() => {});
-  }, []);
+  const settings = useSiteSettings();
 
   const donationPhone = settings.donation_phone || "+60 17-731 6088";
   const donationQr = settings.donation_qr || "/images/tng-qr.jpg";

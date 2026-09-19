@@ -7,10 +7,12 @@ import { ClassesSection } from "@/components/sections/classes-section";
 import { TeamCarousel } from "@/components/sections/team-carousel";
 import { AdvisorSection } from "@/components/sections/advisor-section";
 
-import { getFeaturedEvents, getEvents } from "@/lib/firebase/events";
-import { getClasses } from "@/lib/firebase/classes";
-import { getDepartmentBySlug } from "@/lib/firebase/departments";
-import { getSettings } from "@/lib/firebase/settings";
+import {
+  getCachedActiveClasses,
+  getCachedDepartmentBySlug,
+  getCachedEvents,
+  getCachedSettings,
+} from "@/lib/firebase/public-content";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -33,13 +35,16 @@ const galleryImages = [
 
 export default async function HomePage() {
   // Fetch dynamic data
-  const [featuredEvents, allEvents, classes, excoDept, settings] = await Promise.all([
-    getFeaturedEvents(),
-    getEvents().catch(() => []),
-    getClasses({ active_only: true }),
-    getDepartmentBySlug("exco").catch(() => null),
-    getSettings().catch(() => ({} as Record<string, string>))
+  const [allEvents, classes, excoDept, settings] = await Promise.all([
+    getCachedEvents().catch(() => []),
+    getCachedActiveClasses(),
+    getCachedDepartmentBySlug("exco").catch(() => null),
+    getCachedSettings().catch(() => ({} as Record<string, string>))
   ]);
+  const featuredEvents = [...allEvents]
+    .filter((event) => event.is_featured && event.status === "upcoming")
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 3);
 
   // Transform Events Data (1 Main, up to 2 Side Events)
   const mainEvent = featuredEvents[0] ? {

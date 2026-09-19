@@ -1,4 +1,4 @@
-import { getClassById, getClassBySlug } from "@/lib/firebase/classes";
+import { getCachedClassById, getCachedClassBySlug } from "@/lib/firebase/public-content";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 
 const getClass = cache((id: string) =>
-  getClassBySlug(id).catch(() => getClassById(id)).catch(() => null),
+  getCachedClassBySlug(id).catch(() => getCachedClassById(id)).catch(() => null),
 );
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {

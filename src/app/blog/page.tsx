@@ -3,7 +3,7 @@ import { Calendar, ArrowRight, BookOpen } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
-import { getPublishedPosts } from "@/lib/firebase/blog";
+import { getCachedPublishedPosts } from "@/lib/firebase/public-content";
 
 export const metadata: Metadata = {
   title: "Islamic Articles & News",
@@ -58,7 +58,7 @@ const fivePillars = [
 ];
 
 export default async function BlogPage() {
-  const blogPosts = await getPublishedPosts();
+  const blogPosts = await getCachedPublishedPosts();
 
   return (
     <main className="bg-white">
