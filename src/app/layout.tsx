@@ -88,13 +88,6 @@ export const metadata: Metadata = {
       ? { other: { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
       : {}),
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
-      { url: "/icon.png", sizes: "192x192", type: "image/png" },
-    ],
-    apple: [{ url: "/icon.png", sizes: "192x192", type: "image/png" }],
-  },
   manifest: "/manifest.webmanifest",
 };
 
