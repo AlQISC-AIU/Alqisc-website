@@ -14,7 +14,7 @@ interface NavItem {
   children?: { name: string; href: string }[];
 }
 
-function buildNavigation(departments: Department[]): NavItem[] {
+function buildNavigation(departments: Department[], registrationOpen: boolean): NavItem[] {
   const deptChildren = departments.map((d) => ({
     name: d.name,
     href: `/departments/${d.slug}`,
@@ -31,12 +31,13 @@ function buildNavigation(departments: Department[]): NavItem[] {
       ? [{ name: "Department", href: "#", children: deptChildren }]
       : []),
     { name: "Donation", href: "/donation" },
+    ...(registrationOpen ? [{ name: "Join Us", href: "/join" }] : []),
   ];
 }
 
-export function Navbar({ departments = [] }: { settings?: Record<string, string>; departments?: Department[] }) {
+export function Navbar({ settings = {}, departments = [] }: { settings?: Record<string, string>; departments?: Department[] }) {
   const pathname = usePathname();
-  const navigation = buildNavigation(departments);
+  const navigation = buildNavigation(departments, settings.committee_registration_open === "true");
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);

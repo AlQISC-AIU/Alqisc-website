@@ -19,6 +19,9 @@ rules_version = '2';
 // authorized_admins: email, uid, display_name, status, added_by, created_at,
 //   updated_at, last_signed_in_at. Contains private access-control data and is
 //   only managed through Firebase Admin SDK route handlers.
+// committee_applications / committee_registration_config: applicant personal
+//   data and form settings. Only accessed through Admin SDK route handlers, so
+//   the catch-all rule below denies all browser access.
 // Website-content collections are public to support the public site. Only a
 // verified allowlisted administrator may write.
 

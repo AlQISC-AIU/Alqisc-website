@@ -24,6 +24,7 @@ import {
     ChevronRight,
     UserCog,
     CircleUserRound,
+    ClipboardList,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -32,6 +33,7 @@ const sidebarLinks = [
     { name: "Events", href: adminPath("/events"), icon: Calendar },
     { name: "Classes", href: adminPath("/classes"), icon: BookOpen },
     { name: "Blog", href: adminPath("/blog"), icon: FileText },
+    { name: "Registrations", href: adminPath("/registrations"), icon: ClipboardList },
     { name: "Administrators", href: adminPath("/administrators"), icon: UserCog },
     { name: "My Profile", href: adminPath("/profile"), icon: CircleUserRound },
     { name: "Settings", href: adminPath("/settings"), icon: Settings },
