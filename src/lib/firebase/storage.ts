@@ -1,5 +1,7 @@
 "use client";
 
+import { isStorageUrl } from "./storage-origin";
+
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_EDGE = 1920;
@@ -11,6 +13,7 @@ const ALLOWED_FOLDERS = new Set([
     "blog",
     "settings",
     "profiles",
+    "feed",
 ]);
 const ALLOWED_TYPES = new Set([
     "image/jpeg",
@@ -141,7 +144,7 @@ export async function uploadImageAction(
 export function getFirebaseStoragePath(value: string): string | null {
     if (!value) return null;
     if (value.startsWith("images/")) return value;
-    if (!value.includes("firebasestorage.googleapis.com")) return null;
+    if (!isStorageUrl(value)) return null;
 
     try {
         const parsed = new URL(value);

@@ -3,6 +3,7 @@ import { MissionVisionSection } from "@/components/sections/mission-vision-secti
 import { ZakatSection } from "@/components/sections/zakat-section";
 import { HighlightsCarousel } from "@/components/sections/highlights-carousel";
 import { FeaturedEvents } from "@/components/sections/featured-events";
+import { formatEventDate } from "@/lib/feed";
 import { ClassesSection } from "@/components/sections/classes-section";
 import { TeamCarousel } from "@/components/sections/team-carousel";
 import { AdvisorSection } from "@/components/sections/advisor-section";
@@ -49,7 +50,7 @@ export default async function HomePage() {
   // Transform Events Data (1 Main, up to 2 Side Events)
   const mainEvent = featuredEvents[0] ? {
     title: featuredEvents[0].title,
-    time: `${featuredEvents[0].date} ${featuredEvents[0].time || ''}`.trim(),
+    time: [formatEventDate(featuredEvents[0].date), featuredEvents[0].time].filter(Boolean).join(" · "),
     location: featuredEvents[0].location || "AIU",
     image: featuredEvents[0].image_url || "/images/placeholder.jpg",
     link: `/events/${featuredEvents[0].id}`,
@@ -63,7 +64,7 @@ export default async function HomePage() {
 
   const sideEvents = featuredEvents.slice(1, 3).map(e => ({
     title: e.title,
-    time: `${e.date} ${e.time || ''}`.trim(),
+    time: [formatEventDate(e.date), e.time].filter(Boolean).join(" · "),
     location: e.location || "AIU",
     image: e.image_url || "/images/placeholder.jpg",
     link: `/events/${e.id}`,
@@ -77,7 +78,7 @@ export default async function HomePage() {
       .slice(0, 2 - sideEvents.length)
       .map(e => ({
         title: e.title,
-        time: new Date(e.date).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" }),
+        time: formatEventDate(e.date),
         location: e.location || "AIU",
         image: e.image_url || "/images/placeholder.jpg",
         link: `/events/${e.id}`,

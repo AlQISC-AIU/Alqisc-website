@@ -64,7 +64,7 @@ export default function DashboardPage() {
                 const firebase = createClient();
                 const results = await Promise.all([
                     firebase.from('departments').select('*', { count: 'exact', head: true }),
-                    firebase.from('events').select('*', { count: 'exact', head: true }),
+                    firebase.from('public_content').select('*', { count: 'exact', head: true }).eq('kind', 'event').eq('status', 'published'),
                     firebase.from('classes').select('*', { count: 'exact', head: true }),
                     firebase.from('blog_posts').select('*', { count: 'exact', head: true }),
                 ]);
@@ -99,7 +99,7 @@ export default function DashboardPage() {
             label: "Events",
             value: counts.events,
             icon: Calendar,
-            href: "/club-console-alqisc-7q4m-test/admin/events",
+            href: "/club-console-alqisc-7q4m-test/admin/feed",
             color: "bg-[var(--primary)]/5 text-[var(--primary)]",
             iconBg: "bg-[var(--primary)]/10",
         },
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                         </h3>
                         <div className="space-y-2">
                             {[
-                                { label: "Add New Event", href: "/club-console-alqisc-7q4m-test/admin/events/new", icon: Calendar },
+                                { label: "Add New Event", href: "/club-console-alqisc-7q4m-test/admin/feed/new?kind=event", icon: Calendar },
                                 { label: "Write Blog Post", href: "/club-console-alqisc-7q4m-test/admin/blog/new", icon: FileText },
                                 { label: "Manage Members", href: "/club-console-alqisc-7q4m-test/admin/departments", icon: Users },
                                 { label: "Edit Settings", href: "/club-console-alqisc-7q4m-test/admin/settings", icon: TrendingUp },

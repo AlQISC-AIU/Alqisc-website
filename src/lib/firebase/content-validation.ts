@@ -1,3 +1,5 @@
+import { isBucketFileUrl } from "./storage-origin";
+
 type Row = Record<string, unknown>;
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -39,15 +41,7 @@ function imageUrl(value: unknown): value is string {
     if (value === "") return true;
     if (!string(value, 1, 2048)) return false;
     if (value.startsWith("/images/")) return true;
-    try {
-        const url = new URL(value);
-        return url.protocol === "https:" &&
-            url.hostname === "firebasestorage.googleapis.com" &&
-            STORAGE_BUCKET !== "" &&
-            url.pathname.startsWith(`/v0/b/${STORAGE_BUCKET}/o/`);
-    } catch {
-        return false;
-    }
+    return isBucketFileUrl(value, STORAGE_BUCKET);
 }
 
 function stringList(value: unknown, maxItems: number, maxItemLength = 500): value is string[] {
@@ -69,7 +63,7 @@ function socials(value: unknown): boolean {
 }
 
 export const CONTENT_COLLECTIONS = [
-    "departments", "teams", "members", "events", "classes", "blog_posts", "site_settings",
+    "departments", "teams", "members", "classes", "blog_posts", "site_settings",
 ] as const;
 
 export type ContentCollection = typeof CONTENT_COLLECTIONS[number];
@@ -106,15 +100,6 @@ export function validateContentDocument(
             if (!exactKeys(data, keys)) return "Member fields do not match the allowed schema.";
             if (!string(data.team_id, 1, 128) || !string(data.name, 1, 150) || !string(data.role, 0, 150)) return "Member identity fields are invalid.";
             if (!imageUrl(data.image_url) || !socials(data.socials) || !integer(data.display_order, 0, 10_000)) return "Member image, contacts, or display order is invalid.";
-            return null;
-        }
-        case "events": {
-            const keys = ["title", "description", "date", "time", "location", "category", "status", "image_url", "is_featured", "registration_url", "created_at"];
-            if (!exactKeys(data, keys)) return "Event fields do not match the allowed schema.";
-            if (!string(data.title, 1, 250) || !string(data.description, 0, 30_000)) return "Event title or description is invalid.";
-            if (!isoDate(data.date) || !string(data.time, 0, 100) || !string(data.location, 0, 300)) return "Event date, time, or location is invalid.";
-            if (!["weekly", "monthly", "special"].includes(String(data.category)) || !["upcoming", "past", "cancelled"].includes(String(data.status))) return "Event category or status is invalid.";
-            if (!imageUrl(data.image_url) || typeof data.is_featured !== "boolean" || !externalUrl(data.registration_url) || !isoDate(data.created_at)) return "Event image, registration URL, or metadata is invalid.";
             return null;
         }
         case "classes": {

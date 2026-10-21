@@ -30,7 +30,7 @@ import {
 const sidebarLinks = [
     { name: "Dashboard", href: ADMIN_DASHBOARD_PATH, icon: LayoutDashboard },
     { name: "Departments", href: adminPath("/departments"), icon: Users },
-    { name: "Events", href: adminPath("/events"), icon: Calendar },
+    { name: "Events & Feed", href: adminPath("/feed"), icon: Calendar, tour: "events" },
     { name: "Classes", href: adminPath("/classes"), icon: BookOpen },
     { name: "Blog", href: adminPath("/blog"), icon: FileText },
     { name: "Registrations", href: adminPath("/registrations"), icon: ClipboardList },
@@ -136,7 +136,7 @@ export function AdminSidebar() {
                             <Link
                                 key={link.name}
                                 href={link.href}
-                                data-tour={`nav-${link.name.toLowerCase()}`}
+                                data-tour={`nav-${"tour" in link ? link.tour : link.name.toLowerCase()}`}
                                 onClick={() => setIsMobileOpen(false)}
                                 className={cn(
                                     "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group",

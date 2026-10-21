@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isStorageUrl } from "@/lib/firebase/storage-origin";
 import { getFirebaseAdminAuth, normalizeAdminEmail, PRIMARY_ADMIN_EMAIL, verifyAdminSession } from "@/lib/firebase/admin";
 import { sendPasswordSetupEmail } from "@/lib/firebase/auth-email";
 
@@ -28,7 +29,7 @@ export async function PATCH(request: Request) {
     if (displayName.length < 2 || displayName.length > 80) {
         return NextResponse.json({ error: "Your name must be 2 to 80 characters." }, { status: 400 });
     }
-    if (photoUrl && !photoUrl.startsWith("https://firebasestorage.googleapis.com/")) {
+    if (photoUrl && !isStorageUrl(photoUrl)) {
         return NextResponse.json({ error: "Upload a profile photo before saving." }, { status: 400 });
     }
     const user = await getFirebaseAdminAuth().updateUser(token.uid, {

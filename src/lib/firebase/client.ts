@@ -64,19 +64,6 @@ export function withDefaults(collectionName: string, input: Row): Row {
             return { display_order: 0, ...input };
         case "members":
             return { role: "", image_url: "", socials: {}, display_order: 0, ...input };
-        case "events":
-            return {
-                description: "",
-                time: "",
-                location: "",
-                category: "special",
-                status: "upcoming",
-                image_url: "",
-                is_featured: false,
-                registration_url: "",
-                created_at: timestamp,
-                ...input,
-            };
         case "classes":
             return {
                 description: "",
@@ -126,7 +113,6 @@ function normalizeWrite(collectionName: string, input: Row): Row {
     const urlFields: Record<string, string[]> = {
         departments: ["image_url"],
         members: ["image_url"],
-        events: ["image_url", "registration_url"],
         classes: ["image_url", "registration_url"],
         blog_posts: ["featured_image_url"],
     };

@@ -18,7 +18,6 @@ const CACHE_TAGS_BY_COLLECTION: Record<ContentCollection, string[]> = {
     departments: ["departments"],
     teams: ["teams", "departments"],
     members: ["members", "teams", "departments"],
-    events: ["events"],
     classes: ["classes"],
     blog_posts: ["blog-posts"],
     site_settings: ["site-settings"],

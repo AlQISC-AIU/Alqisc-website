@@ -1,7 +1,10 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore/lite";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
+import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
+import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore/lite";
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from "firebase/storage";
+
+// Optional. Analytics stays off when it is not set.
+export const ANALYTICS_MEASUREMENT_ID = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || undefined;
 
 // NEXT_PUBLIC_* values are inlined at build time, so each one is read by its full name.
 const firebaseConfig = {
@@ -22,18 +25,37 @@ export function getFirebaseApp(): FirebaseApp {
     if (missing.length > 0) {
         throw new Error(`Firebase web config is missing ${missing.join(", ")}. Set the NEXT_PUBLIC_FIREBASE_* environment variables.`);
     }
-    return initializeApp(firebaseConfig);
+    return initializeApp({ ...firebaseConfig, measurementId: ANALYTICS_MEASUREMENT_ID });
 }
 
+// Set by `npm run dev:emulators` to run against local Firebase emulators.
+const EMULATOR_HOST = process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_HOST;
+const connected = { auth: false, firestore: false, storage: false };
+
 export function getFirebaseAuth(): Auth {
-    return getAuth(getFirebaseApp());
+    const auth = getAuth(getFirebaseApp());
+    if (EMULATOR_HOST && !connected.auth) {
+        connectAuthEmulator(auth, `http://${EMULATOR_HOST}:9099`, { disableWarnings: true });
+        connected.auth = true;
+    }
+    return auth;
 }
 
 export function getFirestoreDb(): Firestore {
-    return getFirestore(getFirebaseApp());
+    const db = getFirestore(getFirebaseApp());
+    if (EMULATOR_HOST && !connected.firestore) {
+        connectFirestoreEmulator(db, EMULATOR_HOST, 8080);
+        connected.firestore = true;
+    }
+    return db;
 }
 
 export function getFirebaseStorage(): FirebaseStorage {
-    return getStorage(getFirebaseApp());
+    const storage = getStorage(getFirebaseApp());
+    if (EMULATOR_HOST && !connected.storage) {
+        connectStorageEmulator(storage, EMULATOR_HOST, 9199);
+        connected.storage = true;
+    }
+    return storage;
 }
 
