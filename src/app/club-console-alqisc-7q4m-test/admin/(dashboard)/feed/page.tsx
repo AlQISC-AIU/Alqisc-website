@@ -277,7 +277,7 @@ export default function FeedPage() {
                     <div>
                         <h2 className="text-xl sm:text-2xl font-bold text-[var(--dark)]">Events &amp; Feed</h2>
                         <p className="text-sm text-[var(--gray)] mt-1">
-                            Everything here shows in the mobile app. Published events also show on the website.
+                            Everything published here shows in the mobile app and on the website.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2" data-tour="feed-add">

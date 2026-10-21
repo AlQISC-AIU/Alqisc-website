@@ -3,6 +3,7 @@ import { MissionVisionSection } from "@/components/sections/mission-vision-secti
 import { ZakatSection } from "@/components/sections/zakat-section";
 import { HighlightsCarousel } from "@/components/sections/highlights-carousel";
 import { FeaturedEvents } from "@/components/sections/featured-events";
+import { LatestNewsSection } from "@/components/sections/latest-news-section";
 import { formatEventDate } from "@/lib/feed";
 import { ClassesSection } from "@/components/sections/classes-section";
 import { TeamCarousel } from "@/components/sections/team-carousel";
@@ -12,6 +13,7 @@ import {
   getCachedActiveClasses,
   getCachedDepartmentBySlug,
   getCachedEvents,
+  getCachedNews,
   getCachedSettings,
 } from "@/lib/firebase/public-content";
 import type { Metadata } from "next";
@@ -36,11 +38,12 @@ const galleryImages = [
 
 export default async function HomePage() {
   // Fetch dynamic data
-  const [allEvents, classes, excoDept, settings] = await Promise.all([
+  const [allEvents, classes, excoDept, settings, news] = await Promise.all([
     getCachedEvents().catch(() => []),
     getCachedActiveClasses(),
     getCachedDepartmentBySlug("exco").catch(() => null),
-    getCachedSettings().catch(() => ({} as Record<string, string>))
+    getCachedSettings().catch(() => ({} as Record<string, string>)),
+    getCachedNews().catch(() => []),
   ]);
   const featuredEvents = [...allEvents]
     .filter((event) => event.is_featured && event.status === "upcoming")
@@ -136,6 +139,9 @@ export default async function HomePage() {
 
       {/* Featured Events / Latest News */}
       <FeaturedEvents mainEvent={mainEvent} sideEvents={sideEvents} />
+
+      {/* Announcements and Instagram/YouTube posts from the app's feed */}
+      <LatestNewsSection items={news.slice(0, 3)} />
 
       {/* Our Classes */}
       {classesData.length > 0 && <ClassesSection classes={classesData} />}

@@ -24,6 +24,7 @@ function buildNavigation(departments: Department[], registrationOpen: boolean): 
     { name: "Home", href: "/" },
     { name: "About", href: "/about" },
     { name: "Events", href: "/events" },
+    { name: "News", href: "/news" },
     { name: "Classes", href: "/classes" },
     { name: "Contact", href: "/contact" },
     { name: "Blog", href: "/blog" },

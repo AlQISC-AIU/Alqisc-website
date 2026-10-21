@@ -9,6 +9,7 @@ import {
     getDepartmentBySlug,
 } from "./departments";
 import { getEventById, getEvents } from "./events";
+import { getAnnouncementById, getNews } from "./news";
 import { getSettings } from "./settings";
 
 const CONTENT_REVALIDATE_SECONDS = 15 * 60;
@@ -84,4 +85,18 @@ export const getCachedPostBySlug = unstable_cache(
     getPostBySlug,
     ["public-post-by-slug"],
     { revalidate: CONTENT_REVALIDATE_SECONDS, tags: ["blog-posts"] },
+);
+
+// Instagram and YouTube posts arrive from the importers every 15 minutes
+// without telling the website, so news is re-read on the same schedule.
+export const getCachedNews = unstable_cache(
+    getNews,
+    ["public-news"],
+    { revalidate: CONTENT_REVALIDATE_SECONDS, tags: ["feed"] },
+);
+
+export const getCachedAnnouncementById = unstable_cache(
+    getAnnouncementById,
+    ["public-announcement-by-id"],
+    { revalidate: CONTENT_REVALIDATE_SECONDS, tags: ["feed"] },
 );

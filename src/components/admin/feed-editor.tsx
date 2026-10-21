@@ -319,7 +319,7 @@ export function FeedEditor({ kind, initial }: { kind: EditableKind; initial?: Fe
                                 <p className="text-xs text-[var(--gray)]">
                                     {isEvent
                                         ? "Published events appear on the website's Events page and in the mobile app."
-                                        : "Published announcements appear in the mobile app."}
+                                        : "Published announcements appear in the mobile app and on the website's News page."}
                                 </p>
 
                                 {isEvent ? (

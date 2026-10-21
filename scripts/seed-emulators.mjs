@@ -64,6 +64,13 @@ const feed = [
         published_at: days(-2), created_at: days(-2), updated_at: days(-2),
         thumbnail_url: null, media_type: "none",
     }],
+    ["sample-announcement", {
+        kind: "announcement", source: "alqisc", source_id: null, status: "published", priority: 0,
+        title: { en: "Ramadan timetable is out", ar: "جدول رمضان" },
+        summary: { en: "Sample published announcement.\n\nIt has two paragraphs." },
+        published_at: days(-1), created_at: days(-1), updated_at: days(-1),
+        thumbnail_url: null, media_type: "none",
+    }],
     ["instagram_sample", {
         kind: "instagram", source: "instagram", source_id: "sample", status: "published", priority: 0,
         title: { en: "Sample Instagram post" }, summary: { en: "Imported caption." },
