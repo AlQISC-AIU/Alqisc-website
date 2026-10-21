@@ -17,16 +17,23 @@ function getAdminApp() {
     const existingApp = getApps()[0];
     if (existingApp) return existingApp;
 
-    const projectId = process.env.FIREBASE_PROJECT_ID || "alqisc-a2999";
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    if (!projectId) throw new Error("FIREBASE_PROJECT_ID is not set.");
+    // The browser signs admins in against NEXT_PUBLIC_FIREBASE_PROJECT_ID, and the
+    // server verifies their tokens against FIREBASE_PROJECT_ID, so both must match.
+    const browserProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (browserProjectId && browserProjectId !== projectId) {
+        throw new Error(`FIREBASE_PROJECT_ID (${projectId}) and NEXT_PUBLIC_FIREBASE_PROJECT_ID (${browserProjectId}) must name the same project.`);
+    }
+    const storageBucket =
+        process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    if (!storageBucket) throw new Error("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is not set.");
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
     return initializeApp({
         projectId,
-        storageBucket:
-            process.env.FIREBASE_STORAGE_BUCKET ||
-            process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-            "alqisc-a2999.firebasestorage.app",
+        storageBucket,
         credential:
             clientEmail && privateKey
                 ? cert({ projectId, clientEmail, privateKey })

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "alqisc-a2999"
+    "default": "al-qisc-dev",
+    "dev": "al-qisc-dev",
+    "prod": "al-qisc-prod"
   }
 }

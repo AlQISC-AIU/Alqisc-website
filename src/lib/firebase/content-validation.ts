@@ -2,6 +2,7 @@ type Row = Record<string, unknown>;
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STORAGE_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "";
 const IMAGE_SETTING_KEYS = new Set(["hero_image", "advisor_image", "donation_qr"]);
 const SOCIAL_KEYS = new Set([
     "instagram", "facebook", "twitter", "linkedin", "github", "email", "phone", "website",
@@ -42,7 +43,8 @@ function imageUrl(value: unknown): value is string {
         const url = new URL(value);
         return url.protocol === "https:" &&
             url.hostname === "firebasestorage.googleapis.com" &&
-            url.pathname.startsWith("/v0/b/alqisc-a2999.firebasestorage.app/o/");
+            STORAGE_BUCKET !== "" &&
+            url.pathname.startsWith(`/v0/b/${STORAGE_BUCKET}/o/`);
     } catch {
         return false;
     }
