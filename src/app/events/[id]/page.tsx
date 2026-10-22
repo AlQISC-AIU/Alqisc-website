@@ -1,4 +1,5 @@
 import { getCachedEventById } from "@/lib/firebase/public-content";
+import { CLUB_TIME_ZONE } from "@/lib/feed";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,11 +50,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     name: event.title,
     description: event.description,
     startDate: event.date,
-    eventStatus: event.status === "cancelled"
-      ? "https://schema.org/EventCancelled"
-      : event.status === "upcoming"
-        ? "https://schema.org/EventScheduled"
-        : "https://schema.org/EventCompleted",
+    eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: `${siteUrl}/events/${event.id}`,
     image: event.image_url ? [event.image_url] : undefined,
@@ -82,12 +79,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: CLUB_TIME_ZONE,
       });
-  const statusLabel = event.status === "upcoming"
-    ? "Upcoming"
-    : event.status === "cancelled"
-      ? "Cancelled"
-      : "Past Event";
+  const statusLabel = event.status === "upcoming" ? "Upcoming" : "Past Event";
 
   return (
     <main className="min-h-screen bg-white">

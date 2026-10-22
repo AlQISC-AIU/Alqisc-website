@@ -34,15 +34,17 @@ export interface Member {
     display_order: number;
 }
 
+// A feed event (public_content, kind "event") shaped for the website's pages.
+// See toWebsiteEvent in ./events.
 export interface Event {
     id: string;
     title: string;
     description: string;
-    date: string;
-    time: string;
+    date: string; // start, ISO
+    time: string; // formatted in Malaysian time
     location: string;
     category: string;
-    status: string;
+    status: "upcoming" | "past";
     image_url: string;
     is_featured: boolean;
     registration_url: string;

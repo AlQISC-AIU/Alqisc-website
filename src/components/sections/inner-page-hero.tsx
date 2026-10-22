@@ -5,6 +5,8 @@ interface InnerPageHeroProps {
   description: string;
   image: string;
   imagePosition?: string;
+  /** Match the background of the section below the curved divider. */
+  curveColor?: string;
 }
 
 export function InnerPageHero({
@@ -12,6 +14,7 @@ export function InnerPageHero({
   description,
   image,
   imagePosition = "center",
+  curveColor = "white",
 }: InnerPageHeroProps) {
   return (
     <section className="relative isolate grid min-h-[520px] place-items-center overflow-hidden bg-[var(--primary)] px-5 pb-20 pt-16 sm:min-h-[580px] sm:px-6 sm:pb-24 lg:min-h-[620px] lg:px-8">
@@ -45,7 +48,7 @@ export function InnerPageHero({
       >
         <path
           d="M0 92 C180 70 350 30 520 38 C690 46 820 136 1030 142 C1240 148 1350 116 1440 92 V180 H0 Z"
-          fill="white"
+          fill={curveColor}
         />
       </svg>
     </section>

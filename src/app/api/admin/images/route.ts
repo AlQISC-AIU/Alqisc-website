@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminStorage, verifyAdminSession } from "@/lib/firebase/admin";
+import { storageDownloadUrl } from "@/lib/firebase/storage-origin";
 
 export const runtime = "nodejs";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const UPLOAD_FOLDERS = new Set([
-    "departments", "members", "events", "classes", "blog", "settings", "profiles",
+    "departments", "members", "events", "classes", "blog", "settings", "profiles", "feed",
 ]);
 const MANAGED_FOLDERS = new Set([...UPLOAD_FOLDERS, "migrated"]);
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
             metadata: { firebaseStorageDownloadTokens: token, originalName: file.name.slice(0, 200) },
         },
     });
-    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+    const url = storageDownloadUrl(bucket.name, path, token);
     return NextResponse.json({ url, path, public_id: path, uploadedBytes: file.size });
 }
 

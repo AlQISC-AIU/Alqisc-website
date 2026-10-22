@@ -1,12 +1,11 @@
 import "server-only";
 
-const FIREBASE_API_KEY =
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-    "AIzaSyCY2fdiTk2QKrDq4B73Zx5hl8wsZS9AoyM";
-
 export async function sendPasswordSetupEmail(email: string): Promise<void> {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (!apiKey) throw new Error("NEXT_PUBLIC_FIREBASE_API_KEY is not set.");
+
     const response = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(FIREBASE_API_KEY)}`,
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(apiKey)}`,
         {
             method: "POST",
             headers: { "Content-Type": "application/json" },

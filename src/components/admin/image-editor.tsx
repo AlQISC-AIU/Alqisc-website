@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isStorageUrl } from "@/lib/firebase/storage-origin";
 import { Crop, FlipHorizontal2, Loader2, Maximize2, RotateCw, Upload, X } from "lucide-react";
 import { notifications } from "@/components/ui/notification-provider";
 
@@ -133,7 +134,7 @@ export function ImageEditorDialog({
         });
         const objectUrl = source instanceof File
             ? URL.createObjectURL(source)
-            : source.startsWith("https://firebasestorage.googleapis.com/")
+            : isStorageUrl(source)
                 ? `/api/admin/images?value=${encodeURIComponent(source)}`
                 : source;
         const image = new window.Image();

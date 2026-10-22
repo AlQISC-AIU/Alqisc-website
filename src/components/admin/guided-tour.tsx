@@ -45,8 +45,8 @@ const DASHBOARD_STEPS: TourStep[] = [
     },
     {
         target: "[data-tour='nav-events']",
-        title: "Events",
-        content: "Create and manage upcoming events with dates, locations, and registration links.",
+        title: "Events & Feed",
+        content: "Publish events and announcements to the website and the mobile app, and manage imported Instagram and YouTube posts.",
         placement: "right",
     },
     {
@@ -128,30 +128,30 @@ const DEPARTMENTS_EDIT_STEPS: TourStep[] = [
 
 const EVENTS_LIST_STEPS: TourStep[] = [
     {
-        target: "[data-tour='event-add']",
-        title: "Add New Event",
-        content: "Click here to create a new event with title, date, location, category, and an optional registration link.",
+        target: "[data-tour='feed-add']",
+        title: "Add Events and Announcements",
+        content: "Create an event (website and app) or an announcement (app). Instagram & YouTube turns the automatic imports on or off.",
         placement: "bottom",
     },
     {
-        target: "[data-tour='event-filters']",
+        target: "[data-tour='feed-filters']",
         title: "Filter & Search",
-        content: "Filter events by All, Upcoming, or Past. Use the search box to find events quickly by name.",
+        content: "Filter by type and status, or search by title. Imported posts can be archived, republished or pinned from the list.",
         placement: "bottom",
     },
 ];
 
 const EVENTS_NEW_STEPS: TourStep[] = [
   {
-    target: "[data-tour='event-form']",
-        title: "Event Details",
-        content: "Fill in the event details on the left (title, description, date, time, location, registration link). On the right, set the category, status, featured toggle, and upload an image.",
+    target: "[data-tour='feed-form']",
+        title: "Details",
+        content: "Write the title and summary in English (Arabic and Malay are optional). Events also need a start time in Malaysian time. On the right, choose who can see it, the priority and a poster.",
         placement: "bottom",
     },
     {
-        target: "[data-tour='event-form']",
+        target: "[data-tour='feed-form']",
         title: "Publish and Update",
-        content: "Review the status and featured settings before saving. On an edit page, saving updates the existing event; deleting should only be used when the event must be removed permanently.",
+        content: "Published items appear right away. Archive an item to hide it but keep it; delete only when it must be removed for good.",
         placement: "top",
     },
 ];
@@ -278,10 +278,10 @@ const PROFILE_STEPS: TourStep[] = [
       "Set the class schedule, venue, fee, enrollment link, objectives, and active status before saving.",
   },
   {
-    target: "[data-tour='event-form']",
+    target: "[data-tour='feed-form']",
     title: "Publish and Update",
     content:
-      "Choose the event status, featured setting, registration link, and image. On edit pages, save changes only after reviewing the details.",
+      "Choose who can see the item, its priority, registration link and poster. On edit pages, save changes only after reviewing the details.",
   },
   {
     target: "[data-tour='blog-form']",
@@ -345,9 +345,9 @@ function getStepsForPath(pathname: string): TourStep[] {
     if (route === "/departments") return DEPARTMENTS_LIST_STEPS;
     if (route === "/departments/new") return DEPARTMENTS_NEW_STEPS;
     if (/^\/departments\/.+\/edit$/.test(route)) return DEPARTMENTS_EDIT_STEPS;
-    if (route === "/events") return EVENTS_LIST_STEPS;
-    if (route === "/events/new") return EVENTS_NEW_STEPS;
-    if (/^\/events\/.+\/edit$/.test(route)) return EVENTS_NEW_STEPS;
+    if (route === "/feed") return EVENTS_LIST_STEPS;
+    if (route === "/feed/new") return EVENTS_NEW_STEPS;
+    if (/^\/feed\/.+\/edit$/.test(route)) return EVENTS_NEW_STEPS;
     if (route === "/classes") return CLASSES_LIST_STEPS;
     if (route === "/classes/new") return CLASSES_NEW_STEPS;
     if (/^\/classes\/.+\/edit$/.test(route)) return CLASSES_NEW_STEPS;

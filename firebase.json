@@ -6,13 +6,19 @@
   "storage": {
     "rules": "storage.rules"
   },
-  "auth": {
-    "providers": {
-      "emailPassword": true,
-      "googleSignIn": {
-        "oAuthBrandDisplayName": "AlQISC",
-        "supportEmail": "sopgok9@gmail.com"
-      }
-    }
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

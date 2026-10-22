@@ -5,13 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { InnerPageHero } from "@/components/sections/inner-page-hero";
+import { CLUB_TIME_ZONE } from "@/lib/feed";
 import type { Event } from "@/lib/firebase/types";
 
 const filters = [
   { id: "all", label: "All events" },
   { id: "upcoming", label: "Upcoming" },
   { id: "past", label: "Past" },
-  { id: "cancelled", label: "Cancelled" },
 ] as const;
 
 function formatDate(dateString: string) {
@@ -22,13 +22,12 @@ function formatDate(dateString: string) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: CLUB_TIME_ZONE,
   });
 }
 
 function statusLabel(status: string) {
-  if (status === "upcoming") return "Upcoming";
-  if (status === "cancelled") return "Cancelled";
-  return "Past event";
+  return status === "upcoming" ? "Upcoming" : "Past event";
 }
 
 export default function EventsPage() {
@@ -129,9 +128,7 @@ export default function EventsPage() {
                     <span className={`absolute left-4 top-4 rounded-full px-3 py-1.5 text-xs font-bold ${
                       event.status === "upcoming"
                         ? "bg-[var(--secondary)] text-[var(--dark)]"
-                        : event.status === "cancelled"
-                          ? "bg-white text-red-700"
-                          : "bg-white text-[var(--gray-dark)]"
+                        : "bg-white text-[var(--gray-dark)]"
                     }`}>
                       {statusLabel(event.status)}
                     </span>

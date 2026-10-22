@@ -1,75 +1,155 @@
 {
   "indexes": [
     {
+      "collectionGroup": "public_content",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priority",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "published_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "public_content",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kind",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "starts_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "departments",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "is_active", "order": "ASCENDING" },
-        { "fieldPath": "display_order", "order": "ASCENDING" }
+        {
+          "fieldPath": "is_active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "display_order",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "teams",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "department_id", "order": "ASCENDING" },
-        { "fieldPath": "display_order", "order": "ASCENDING" }
+        {
+          "fieldPath": "department_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "display_order",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "teams",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "department_id", "order": "ASCENDING" },
-        { "fieldPath": "display_order", "order": "DESCENDING" }
+        {
+          "fieldPath": "department_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "display_order",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "members",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "team_id", "order": "ASCENDING" },
-        { "fieldPath": "display_order", "order": "ASCENDING" }
+        {
+          "fieldPath": "team_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "display_order",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "members",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "team_id", "order": "ASCENDING" },
-        { "fieldPath": "display_order", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "events",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "is_featured", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "ASCENDING" }
+        {
+          "fieldPath": "team_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "display_order",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "classes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "is_active", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "is_active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "blog_posts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "published_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "published_at",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],
   "fieldOverrides": [
-    { "collectionGroup": "blog_posts", "fieldPath": "content", "indexes": [] },
-    { "collectionGroup": "departments", "fieldPath": "description", "indexes": [] },
-    { "collectionGroup": "events", "fieldPath": "description", "indexes": [] },
-    { "collectionGroup": "classes", "fieldPath": "description", "indexes": [] }
+    {
+      "collectionGroup": "blog_posts",
+      "fieldPath": "content",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "departments",
+      "fieldPath": "description",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "classes",
+      "fieldPath": "description",
+      "indexes": []
+    }
   ]
 }

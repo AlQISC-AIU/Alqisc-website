@@ -15,6 +15,11 @@ const configuredPrimaryAdminEmail = process.env.PRIMARY_ADMIN_EMAIL?.trim().toLo
 if (!projectId || !clientEmail || !privateKey || !apiKey || !configuredPrimaryAdminEmail) {
     throw new Error("Firebase E2E environment variables are incomplete.");
 }
+// These tests create and delete real accounts, documents and files. The live
+// project is shared with the mobile app, so never run them against it.
+if (projectId === "al-qisc-prod") {
+    throw new Error("E2E tests must not run against al-qisc-prod. Point .env at al-qisc-dev.");
+}
 const firebaseApiKey = apiKey;
 export const primaryAdminEmail = configuredPrimaryAdminEmail;
 
