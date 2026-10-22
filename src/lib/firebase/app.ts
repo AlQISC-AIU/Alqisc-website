@@ -3,9 +3,6 @@ import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore/lite";
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from "firebase/storage";
 
-// Optional. Analytics stays off when it is not set.
-export const ANALYTICS_MEASUREMENT_ID = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || undefined;
-
 // NEXT_PUBLIC_* values are inlined at build time, so each one is read by its full name.
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -25,7 +22,7 @@ export function getFirebaseApp(): FirebaseApp {
     if (missing.length > 0) {
         throw new Error(`Firebase web config is missing ${missing.join(", ")}. Set the NEXT_PUBLIC_FIREBASE_* environment variables.`);
     }
-    return initializeApp({ ...firebaseConfig, measurementId: ANALYTICS_MEASUREMENT_ID });
+    return initializeApp(firebaseConfig);
 }
 
 // Set by `npm run dev:emulators` to run against local Firebase emulators.

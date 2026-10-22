@@ -3,7 +3,7 @@ import { Amiri, Cormorant_Garamond, Manrope } from "next/font/google";
 import type { Viewport } from "next";
 import "./globals.css";
 import { LayoutShell } from "@/components/layout/layout-shell";
-import { FirebaseAnalytics } from "@/components/firebase-analytics";
+import { SiteAnalytics } from "@/components/site-analytics";
 import { getCachedActiveDepartments, getCachedSettings } from "@/lib/firebase/public-content";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import { getSiteUrl } from "@/lib/site-url";
@@ -175,7 +175,7 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c") }}
         />
-        <FirebaseAnalytics />
+        <SiteAnalytics />
         <NotificationProvider>
           <LayoutShell settings={settings} departments={departments}>{children}</LayoutShell>
         </NotificationProvider>
