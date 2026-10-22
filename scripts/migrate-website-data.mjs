@@ -17,6 +17,8 @@
 //                          (Firebase console > Authentication > Users > ⋮).
 //                          Needed only when a carried-over admin has a password.
 //   --overwrite            replace records and files that already exist in the target
+//   --close-registration   copy the committee registration switched off, so the
+//                          Join page stays hidden until an admin opens it
 //   --source-bucket, --target-bucket   override <project>.firebasestorage.app
 //
 // Credentials: the Google account from `gcloud auth application-default login`,
@@ -47,6 +49,7 @@ function parseArgs(argv) {
         else if (arg === "--admin") options.admins.push(next().trim().toLowerCase());
         else if (arg === "--hash-config") options.hashConfig = next();
         else if (arg === "--overwrite") options.overwrite = true;
+        else if (arg === "--close-registration") options.closeRegistration = true;
         else if (arg === "--source-bucket") options.sourceBucket = next();
         else if (arg === "--target-bucket") options.targetBucket = next();
         else throw new Error(`Unknown option ${arg}.`);
@@ -226,6 +229,15 @@ function toFeedEvent(id, event) {
     };
 }
 
+// The registration switch lives in two places: the config and a public
+// setting the navbar reads. Both are turned off together.
+function closeRegistration(collection, id, data) {
+    if (!options.closeRegistration) return data;
+    if (collection === "committee_registration_config" && id === "current") return { ...data, is_open: false };
+    if (collection === "site_settings" && id === "committee_registration_open") return { ...data, value: "false" };
+    return data;
+}
+
 async function existingIds(collection, ids) {
     if (ids.length === 0) return [];
     const refs = ids.map((id) => target.db.collection(collection).doc(id));
@@ -319,12 +331,14 @@ async function planDocuments() {
         for (const id of clashes) report.conflicts.push(`${collection}/${id} already in target`);
         for (const doc of snapshot.docs) {
             if (clashes.includes(doc.id) && !options.overwrite) continue;
-            writes.push({ ref: target.db.collection(collection).doc(doc.id), data: rewriteUrls(doc.data()) });
+            writes.push({ ref: target.db.collection(collection).doc(doc.id), data: closeRegistration(collection, doc.id, rewriteUrls(doc.data())) });
         }
     }
 
     const registration = await source.db.doc("committee_registration_config/current").get();
-    if (registration.data()?.is_open === true) {
+    if (options.closeRegistration) {
+        report.notes.push("Committee registration is copied switched OFF. An admin can open it from the Registrations page.");
+    } else if (registration.data()?.is_open === true) {
         report.notes.push("Committee registration is switched ON in the source. It stays on after the move, so the Join page and navbar link go live at cutover.");
     }
 
