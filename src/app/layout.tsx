@@ -88,7 +88,6 @@ export const metadata: Metadata = {
       ? { other: { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
       : {}),
   },
-  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
