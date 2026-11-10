@@ -24,11 +24,11 @@ const TEN_MB = 10 * 1024 * 1024;
 const AVAILABILITY = {
     open_top_positions: ["general_secretary", "general_treasurer"],
     open_department_positions: {
-        exco_dawah: ["head", "first_deputy_head", "second_deputy_head", "exco_member"],
+        exco_dawah: ["head", "first_deputy_head", "department_secretary", "exco_member"],
         exco_co_curricular: [],
         exco_multimedia: ["exco_member"],
         exco_education: ["head"],
-        exco_ict: ["second_deputy_head", "exco_member"],
+        exco_ict: ["department_secretary", "exco_member"],
         exco_sister_affairs: [],
     },
 };
@@ -306,14 +306,16 @@ test.describe("the form (registration API stubbed)", () => {
         // Opening a position in one department does not open it in another.
         const departmentPosition = question(page, "Department position");
         await fillLeadership(page, "EXCO Da'wah", "General Secretary");
-        await expect(departmentPosition.locator("label")).toHaveText(["Head of Department", "1st Deputy Head", "2nd Deputy Head", "EXCO Member"]);
+        await expect(departmentPosition.locator("label")).toHaveText(["Head of Department", "1st Deputy Head", "Department Secretary", "EXCO Member"]);
         await choose(page, "First choice", "EXCO Multimedia, Design & Publication");
         await expect(departmentPosition.locator("label")).toHaveText(["EXCO Member"]);
         await choose(page, "First choice", "EXCO ICT & Technical");
-        await expect(departmentPosition.locator("label")).toHaveText(["2nd Deputy Head", "EXCO Member"]);
+        await expect(departmentPosition.locator("label")).toHaveText(["Department Secretary", "EXCO Member"]);
         await choose(page, "First choice", "EXCO Educational Development");
         await expect(departmentPosition.locator("label")).toHaveText(["Head of Department"]);
-        await expect(page.getByText("Department Secretary")).toHaveCount(0);
+        // The earlier option names are gone.
+        await expect(page.getByText("2nd Deputy Head")).toHaveCount(0);
+        await expect(page.getByText("Deputy Head of Department")).toHaveCount(0);
         await expectControlsNamed(page, "line of leadership");
     });
 
@@ -787,7 +789,7 @@ const REAL_AVAILABILITY = {
         exco_co_curricular: [],
         exco_multimedia: ["exco_member"],
         exco_education: [],
-        exco_ict: ["second_deputy_head", "exco_member"],
+        exco_ict: ["department_secretary", "exco_member"],
         exco_sister_affairs: [],
     },
 };
@@ -875,7 +877,7 @@ test.describe("real submissions (Firebase emulators only)", () => {
             expect(body.accepting).toBe(true);
             expect(body.config).toMatchObject({ is_open: true, term: TERM, deadline: "", intro: "", ...REAL_AVAILABILITY });
             // What the earlier form read; kept so older clients do not break.
-            expect(body.config.open_positions).toEqual(["secretary", "head", "deputy_head", "committee_member"]);
+            expect(body.config.open_positions).toEqual(["secretary", "head", "committee_member"]);
             expect(Array.isArray(body.config.open_departments)).toBe(true);
             expect(Array.isArray(body.departments)).toBe(true);
             expect(body.eligible_members).toEqual([]);
@@ -944,7 +946,7 @@ test.describe("real submissions (Firebase emulators only)", () => {
             expect(both.status()).toBe(400);
 
             // A position level that does not exist in departments.
-            for (const department_position of ["department_secretary", "general_secretary", "member"]) {
+            for (const department_position of ["second_deputy_head", "general_secretary", "member"]) {
                 const response = await submit(request, applicant({ department_position }));
                 expect(response.status(), department_position).toBe(400);
             }
@@ -1369,7 +1371,7 @@ test.describe("real submissions (Firebase emulators only)", () => {
             await expect(department("EXCO Da'wah").getByRole("checkbox")).toHaveCount(4);
             await expect(department("EXCO Da'wah").getByRole("checkbox", { name: "Head of Department" })).toBeChecked();
             await expect(department("EXCO Multimedia, Design & Publication").getByRole("checkbox", { name: "Head of Department" })).not.toBeChecked();
-            await expect(page.getByRole("checkbox", { name: "Department Secretary" })).toHaveCount(0);
+            await expect(page.getByRole("checkbox", { name: "2nd Deputy Head" })).toHaveCount(0);
 
             // Open General Treasurer, and 1st Deputy Head in Sister Affairs only.
             await top("General Treasurer").check();
@@ -1389,7 +1391,7 @@ test.describe("real submissions (Firebase emulators only)", () => {
             expect(info.config.open_top_positions).toEqual(["general_secretary", "general_treasurer"]);
             expect(info.config.open_department_positions).toMatchObject({
                 exco_dawah: ["head", "exco_member"],
-                exco_ict: ["second_deputy_head"],
+                exco_ict: ["department_secretary"],
                 exco_sister_affairs: ["first_deputy_head"],
                 exco_co_curricular: [],
             });

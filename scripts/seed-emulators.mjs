@@ -35,11 +35,11 @@ set("committee_registration_config/current", {
     is_open: true, term: "2026/27", deadline: "", intro: "", updated_at: now,
     open_top_positions: ["general_secretary", "general_treasurer"],
     open_department_positions: {
-        exco_dawah: ["head", "first_deputy_head", "second_deputy_head", "exco_member"],
+        exco_dawah: ["head", "first_deputy_head", "department_secretary", "exco_member"],
         exco_co_curricular: ["first_deputy_head", "exco_member"],
         exco_multimedia: ["exco_member"],
         exco_education: ["head", "exco_member"],
-        exco_ict: ["second_deputy_head", "exco_member"],
+        exco_ict: ["department_secretary", "exco_member"],
         exco_sister_affairs: [],
     },
 });

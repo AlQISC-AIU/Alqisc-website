@@ -558,7 +558,7 @@ export default function JoinPage() {
                     <summary className="cursor-pointer text-sm font-bold text-[var(--dark)] marker:text-[var(--primary)]">
                       General requirements for all candidates
                     </summary>
-                    <p className="mt-3 text-sm leading-6 text-[var(--gray)]">
+                    <p className="mt-3 text-sm leading-6 text-[var(--gray-dark)]">
                       Before you apply, please ensure that you have read the handbook and understand the responsibilities and
                       requirements of the position you would like to apply for.
                     </p>
@@ -626,7 +626,7 @@ export default function JoinPage() {
 
                         {isBachelor && (
                           <div className="grid gap-5 rounded-xl border border-[var(--secondary)]/40 bg-[var(--secondary)]/10 p-4 sm:grid-cols-2 sm:p-5">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gray)] sm:col-span-2">For Bachelor students only</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gray-dark)] sm:col-span-2">For Bachelor students only</p>
                             <div>
                               <label htmlFor="year_of_study" className={labelClassName}>Year of study</label>
                               <select {...fieldProps("year_of_study")}>
@@ -751,7 +751,7 @@ export default function JoinPage() {
                             unavailable={formData.first_choice ? { value: formData.first_choice, reason: "Already your first choice" } : undefined}
                           />
                         ) : (
-                          <p className="rounded-xl border border-[var(--primary)]/15 bg-[var(--light)] p-4 text-sm leading-6 text-[var(--gray)]">
+                          <p className="rounded-xl border border-[var(--primary)]/15 bg-[var(--light)] p-4 text-sm leading-6 text-[var(--gray-dark)]">
                             Only one position is open for applications at the moment, so there is no second choice to make.
                           </p>
                         )}
@@ -789,7 +789,7 @@ export default function JoinPage() {
                               <ExternalLink className="h-4 w-4" aria-hidden="true" />
                               <span className="sr-only">(opens Google Drive in a new tab)</span>
                             </a>
-                            <ul className="mt-3 list-disc space-y-1 pl-5 text-xs leading-5 text-[var(--gray)]">
+                            <ul className="mt-3 list-disc space-y-1 pl-5 text-xs leading-5 text-[var(--gray-dark)]">
                               <li>The folder is on Google Drive and is separate from this form, so adding files there does not submit your application.</li>
                               <li>Start each file name with your full name and student ID, so we can match it to your application.</li>
                               <li>Add your own files only, and please do not open, move or remove anyone else&apos;s.</li>
@@ -855,7 +855,7 @@ export default function JoinPage() {
                           <div role="status"><FieldError id="document-notice" message={documentNotice} /></div>
                         </div>
 
-                        <div className="flex gap-3 rounded-xl border border-[var(--primary)]/15 bg-[var(--light)] p-4 text-sm leading-6 text-[var(--gray)]">
+                        <div className="flex gap-3 rounded-xl border border-[var(--primary)]/15 bg-[var(--light)] p-4 text-sm leading-6 text-[var(--gray-dark)]">
                           <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--primary)]" aria-hidden="true" />
                           <div>
                             <p className="font-semibold text-[var(--dark)]">How your information is used</p>

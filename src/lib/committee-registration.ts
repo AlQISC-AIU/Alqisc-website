@@ -56,15 +56,16 @@ export const POSITION_LABELS: Record<AppliedPosition, string> = {
     exco_sister_affairs: "EXCO Sister Affairs",
 };
 
-// The four position levels every department has. Secretary and Treasurer roles
-// belong to the Top Committee, never to a department.
-export const DEPARTMENT_POSITIONS = ["head", "first_deputy_head", "second_deputy_head", "exco_member"] as const;
+// The four positions every department has. A Department Secretary serves one
+// department; the General Secretary and General Treasurer are Top Committee
+// positions and are never offered here.
+export const DEPARTMENT_POSITIONS = ["head", "first_deputy_head", "department_secretary", "exco_member"] as const;
 export type DepartmentPosition = (typeof DEPARTMENT_POSITIONS)[number];
 
 export const DEPARTMENT_POSITION_LABELS: Record<DepartmentPosition, string> = {
     head: "Head of Department",
     first_deputy_head: "1st Deputy Head",
-    second_deputy_head: "2nd Deputy Head",
+    department_secretary: "Department Secretary",
     exco_member: "EXCO Member",
 };
 
@@ -249,7 +250,7 @@ export function legacyOpenPositions(config: Availability): string[] {
         ...(config.open_top_positions.includes("general_secretary") ? ["secretary"] : []),
         ...(config.open_top_positions.includes("general_treasurer") ? ["treasurer"] : []),
         ...(anyDepartment("head") ? ["head"] : []),
-        ...(anyDepartment("first_deputy_head") || anyDepartment("second_deputy_head") ? ["deputy_head"] : []),
+        ...(anyDepartment("first_deputy_head") ? ["deputy_head"] : []),
         ...(anyDepartment("exco_member") ? ["committee_member"] : []),
     ];
 }

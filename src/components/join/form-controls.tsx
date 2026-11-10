@@ -69,7 +69,7 @@ export function RadioGroup<T extends string>({
                     key={option.value}
                     className={cn(
                       "flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-[var(--primary)]/30",
-                      disabled ? "cursor-not-allowed border-dashed border-[var(--primary)]/15 bg-[var(--light)] text-[var(--gray)]" : "cursor-pointer",
+                      disabled ? "cursor-not-allowed border-dashed border-[var(--primary)]/15 bg-[var(--light)] text-[var(--gray-dark)]" : "cursor-pointer",
                       disabled ? "" : selected
                         ? "border-[var(--primary)] bg-[var(--primary)]/5 font-semibold text-[var(--dark)]"
                         : error ? "border-red-300 text-[var(--dark)]" : "border-[var(--primary)]/15 text-[var(--dark)] hover:border-[var(--primary)]/40"

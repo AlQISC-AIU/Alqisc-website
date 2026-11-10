@@ -50,7 +50,7 @@ npm run deploy:rules:prod  # al-qisc-prod
 
 The form at `/join` follows the committee's official recruitment form. Its questions, options and rules live in `src/lib/committee-registration.ts`, which the page, the API routes (`src/app/api/committee-registration`) and the admin review page all share, so a change there applies everywhere and the form and the server always check the same things.
 
-**Positions.** An application gives a first and a second choice, which must differ. A choice is either a Top Committee position (General Secretary, General Treasurer) or a department. When a department is among the choices the applicant also gives one department position: Head of Department, 1st Deputy Head, 2nd Deputy Head or EXCO Member.
+**Positions.** An application gives a first and a second choice, which must differ. A choice is either a Top Committee position (General Secretary, General Treasurer) or a department. When a department is among the choices the applicant also gives one department position: Head of Department, 1st Deputy Head, Department Secretary or EXCO Member.
 
 **What is open.** Under **Committee Registration** in the admin console, admins open and close the form, set the term, deadline and introduction, and tick which positions take applications: each Top Committee position, and each of the four positions in each department separately. Nothing is open until it is ticked. Applicants are only offered what is open, and the server refuses anything else. Because the form has a single department position, an applicant who chooses two departments is offered the positions open in both.
 

@@ -121,8 +121,11 @@ describe("organisational structure", () => {
 
   it("gives every department exactly four positions and no Top Committee role", () => {
     const labels = labelsOf(DEPARTMENT_POSITIONS, DEPARTMENT_POSITION_LABELS);
-    expect(labels).toEqual(["Head of Department", "1st Deputy Head", "2nd Deputy Head", "EXCO Member"]);
-    for (const label of labels) expect(label).not.toMatch(/secretary|treasurer|president/i);
+    expect(labels).toEqual(["Head of Department", "1st Deputy Head", "Department Secretary", "EXCO Member"]);
+    for (const label of labels) expect(label).not.toMatch(/general secretary|treasurer|president/i);
+    // The department's own secretary is not the Top Committee's General Secretary.
+    expect(DEPARTMENT_POSITIONS).not.toContain("general_secretary");
+    expect(labelsOf(TOP_POSITIONS, POSITION_LABELS)).not.toContain("Department Secretary");
   });
 
   it("names a choice with its department position only when it is a department", () => {
@@ -303,7 +306,7 @@ describe("first and second choice", () => {
     for (const department_position of DEPARTMENT_POSITIONS) {
       expect(validateApplicationInput({ ...base, department_position }, everything).ok, department_position).toBe(true);
     }
-    for (const department_position of ["department_secretary", "member", "deputy_head", "general_secretary", "treasurer"]) {
+    for (const department_position of ["second_deputy_head", "member", "deputy_head", "general_secretary", "treasurer"]) {
       expect(validateApplicationInput({ ...base, department_position }, everything).ok, department_position).toBe(false);
     }
   });
@@ -361,7 +364,7 @@ describe("positions opened by the admin", () => {
     const open = availability(["general_secretary"], {
       exco_dawah: ["head", "exco_member"],
       exco_multimedia: ["exco_member"],
-      exco_ict: ["second_deputy_head"],
+      exco_ict: ["department_secretary"],
     });
     expect(selectableDepartmentPositions(open, { first_choice: "exco_dawah", second_choice: "general_secretary" })).toEqual(["head", "exco_member"]);
     expect(selectableDepartmentPositions(open, { first_choice: "exco_dawah", second_choice: "exco_multimedia" })).toEqual(["exco_member"]);
@@ -390,7 +393,7 @@ describe("positions opened by the admin", () => {
   it("keeps only known positions from untrusted settings", () => {
     const open = normalizeOpenPositions({
       open_top_positions: ["general_treasurer", "president", 7, "general_secretary"],
-      open_department_positions: { exco_dawah: ["exco_member", "department_secretary", "head"], media: ["head"], exco_ict: "head" },
+      open_department_positions: { exco_dawah: ["exco_member", "second_deputy_head", "head"], media: ["head"], exco_ict: "head" },
     });
     expect(open.open_top_positions).toEqual(["general_secretary", "general_treasurer"]);
     expect(open.open_department_positions.exco_dawah).toEqual(["head", "exco_member"]);
@@ -400,7 +403,9 @@ describe("positions opened by the admin", () => {
 
   it("can still describe what is open in the earlier form's terms", () => {
     expect(legacyOpenPositions(nothing)).toEqual([]);
-    expect(legacyOpenPositions(availability(["general_treasurer"], { exco_ict: ["second_deputy_head"] }))).toEqual(["treasurer", "deputy_head"]);
+    expect(legacyOpenPositions(availability(["general_treasurer"], { exco_ict: ["first_deputy_head"] }))).toEqual(["treasurer", "deputy_head"]);
+    // The earlier form had no department secretary, so it has no old name.
+    expect(legacyOpenPositions(availability([], { exco_ict: ["department_secretary"] }))).toEqual([]);
     expect(legacyOpenPositions(everything)).toEqual(["secretary", "treasurer", "head", "deputy_head", "committee_member"]);
   });
 });
