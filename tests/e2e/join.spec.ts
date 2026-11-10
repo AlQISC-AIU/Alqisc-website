@@ -157,6 +157,10 @@ async function pngOfSize(size: number) {
 }
 
 test.describe("the form (registration API stubbed)", () => {
+    // A development server compiles pages as they are first visited, which can
+    // take longer than the default thirty seconds.
+    test.describe.configure({ timeout: 60_000 });
+
     test("loads the first step with every applicant detail question and no leftover question 9 @responsive", async ({ page }) => {
         const errors: string[] = [];
         page.on("pageerror", (error) => errors.push(error.message));
