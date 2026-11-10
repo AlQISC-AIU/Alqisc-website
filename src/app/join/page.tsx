@@ -21,6 +21,7 @@ import {
 } from "@/components/join/form-controls";
 import { cn } from "@/lib/utils";
 import {
+  chosenDepartments,
   DEPARTMENT_POSITION_LABELS,
   detectPhotoType,
   DOCUMENT_TYPES,
@@ -39,7 +40,6 @@ import {
   needsWorkSamples,
   normalizeApplicationInput,
   openAppliedPositions,
-  openDepartmentPositions,
   OTHER_CLUB_COMMITMENT_LABELS,
   OTHER_CLUB_COMMITMENTS,
   PHOTO_REQUIRED,
@@ -47,6 +47,7 @@ import {
   photoProblem,
   POSITION_LABELS,
   positionLabel,
+  selectableDepartmentPositions,
   STUDENT_EMAIL_DOMAIN,
   WORK_SAMPLES_URL,
   YEARS_OF_STUDY,
@@ -71,7 +72,8 @@ const emptyForm: Record<ApplicationField, string> = {
   joined_programs: "",
   programs_joined: "",
   experience: "",
-  applied_position: "",
+  first_choice: "",
+  second_choice: "",
   department_position: "",
   motivation: "",
   accept_other_position: "",
@@ -98,8 +100,8 @@ const STEPS: readonly { id: string; title: string; description: string; fields: 
   {
     id: "position",
     title: "Line of leadership",
-    description: "Choose the one position you would like to apply for.",
-    fields: ["applied_position", "department_position"],
+    description: "Choose the two positions you would most like to serve in.",
+    fields: ["first_choice", "second_choice", "department_position"],
   },
   {
     id: "commitment",
@@ -172,7 +174,7 @@ export default function JoinPage() {
   // "" when idle, otherwise what the form is doing, e.g. "Uploading photo... 40%".
   const [progress, setProgress] = useState("");
   // Set once an application has been stored; shown on the confirmation screen.
-  const [submitted, setSubmitted] = useState<{ email: string; position: string; workSamples: boolean } | null>(null);
+  const [submitted, setSubmitted] = useState<{ email: string; choices: string[]; workSamples: boolean } | null>(null);
   const [photo, setPhoto] = useState<{ file: File; type: PhotoType } | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   // A rejected file is simply not attached, so these are notices, not blockers.
@@ -227,12 +229,13 @@ export default function JoinPage() {
 
   const errors = useMemo(() => {
     const fieldErrors: Partial<Record<FormField, string>> = {
-      ...getApplicationErrors(normalizeApplicationInput(formData)),
+      // The same check the server runs, against the positions the admin has opened.
+      ...getApplicationErrors(normalizeApplicationInput(formData), info?.config),
       ...serverErrors,
     };
     if (PHOTO_REQUIRED && !photo) fieldErrors.photo = "Upload your formal picture.";
     return fieldErrors;
-  }, [formData, serverErrors, photo]);
+  }, [formData, serverErrors, photo, info]);
 
   const errorFor = (field: FormField) => (attempted[stepOf(field)] || touched[field] ? errors[field] : undefined);
   const stepErrors = (index: number) => STEPS[index].fields.filter((field) => errors[field]);
@@ -240,13 +243,17 @@ export default function JoinPage() {
   const markTouched = (field: FormField) => setTouched((current) => (current[field] ? current : { ...current, [field]: true }));
 
   const setField = (field: ApplicationField, value: string) => {
-    setFormData((current) => ({
-      ...current,
-      [field]: value,
-      // Each department opens its own positions, and a Top Committee position
-      // has none, so an earlier answer never carries over to a new choice.
-      ...(field === "applied_position" ? { department_position: "" } : {}),
-    }));
+    setFormData((current) => {
+      const next = { ...current, [field]: value };
+      // Changing a choice can change which department positions are on offer,
+      // or hide the question altogether. An answer that no longer fits is
+      // cleared rather than left selected out of sight.
+      if ((field === "first_choice" || field === "second_choice") && info
+        && !(selectableDepartmentPositions(info.config, next) as string[]).includes(next.department_position)) {
+        next.department_position = "";
+      }
+      return next;
+    });
     // A server-side message is only relevant until the field is edited again.
     setServerErrors((current) => {
       if (!current[field]) return current;
@@ -388,7 +395,9 @@ export default function JoinPage() {
 
       setSubmitted({
         email: formData.student_email.trim().toLowerCase(),
-        position: positionLabel(formData.applied_position, formData.department_position),
+        choices: [formData.first_choice, formData.second_choice]
+          .map((choice) => positionLabel(choice, formData.department_position))
+          .filter(Boolean),
         workSamples: needsWorkSamples(formData),
       });
       resetForm();
@@ -431,14 +440,15 @@ export default function JoinPage() {
   const invalidCount = attempted[step] ? stepErrors(step).length : 0;
   const deadline = info ? formatDeadline(info.config.deadline) : "";
   // Only positions the admin has opened are offered.
-  const positionOptions = info
+  const choiceOptions = info
     ? openAppliedPositions(info.config).map((position) => ({
       value: position,
       label: POSITION_LABELS[position],
       group: isDepartment(position) ? "Departments" : "Top Committee",
     }))
     : [];
-  const departmentPositions = info ? openDepartmentPositions(info.config, formData.applied_position) : [];
+  const departments = chosenDepartments(formData);
+  const departmentPositions = info ? selectableDepartmentPositions(info.config, formData) : [];
   const fileButtonClassName = "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--primary)] px-5 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-white focus-within:ring-2 focus-within:ring-[var(--primary)] focus-within:ring-offset-2";
   const removeButtonClassName = cn(textButtonClassName, "text-[var(--gray)] hover:text-red-600");
 
@@ -492,7 +502,7 @@ export default function JoinPage() {
                 </span>
                 <h2 className="mt-6 font-heading text-2xl font-bold text-[var(--dark)] sm:text-3xl" tabIndex={-1}>Thank you for your application</h2>
                 <p className="mx-auto mt-3 max-w-lg leading-7 text-[var(--dark)]" role="status">
-                  Your application for <strong>{submitted.position}</strong> has been received and saved under{" "}
+                  Your application for <strong>{submitted.choices.join(" and ")}</strong> has been received and saved under{" "}
                   <strong className="break-all">{submitted.email}</strong>. You do not need to submit it again.
                 </p>
                 <p className="mx-auto mt-3 max-w-lg leading-7 text-[var(--gray)]">
@@ -723,23 +733,49 @@ export default function JoinPage() {
                     {step === 2 && (
                       <>
                         <RadioGroup
-                          {...radioProps("applied_position")}
-                          legend="Position you are applying for"
-                          hint="You can apply for one position only. Only positions that are open for applications are listed."
+                          {...radioProps("first_choice")}
+                          legend="First choice"
+                          hint="Only positions that are open for applications are listed."
                           required
                           twoColumns
-                          options={positionOptions}
+                          options={choiceOptions}
                         />
-
-                        {isDepartment(formData.applied_position) && (
+                        {choiceOptions.length > 1 ? (
                           <RadioGroup
-                            {...radioProps("department_position")}
-                            legend="Department position"
-                            hint={`The positions open in ${POSITION_LABELS[formData.applied_position]}.`}
+                            {...radioProps("second_choice")}
+                            legend="Second choice"
+                            hint="This must be different from your first choice."
                             required
                             twoColumns
-                            options={options(departmentPositions, DEPARTMENT_POSITION_LABELS)}
+                            options={choiceOptions}
+                            unavailable={formData.first_choice ? { value: formData.first_choice, reason: "Already your first choice" } : undefined}
                           />
+                        ) : (
+                          <p className="rounded-xl border border-[var(--primary)]/15 bg-[var(--light)] p-4 text-sm leading-6 text-[var(--gray)]">
+                            Only one position is open for applications at the moment, so there is no second choice to make.
+                          </p>
+                        )}
+
+                        {departments.length > 0 && (
+                          departmentPositions.length > 0 ? (
+                            <RadioGroup
+                              {...radioProps("department_position")}
+                              legend="Department position"
+                              hint={`For those who apply for a department. These are the positions open in ${departments.map((department) => POSITION_LABELS[department]).join(" and ")}.`}
+                              required
+                              twoColumns
+                              options={options(departmentPositions, DEPARTMENT_POSITION_LABELS)}
+                            />
+                          ) : (
+                            <div>
+                              <p className={labelClassName}>Department position<RequiredMark /></p>
+                              <p id="department_position" tabIndex={-1} role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">
+                                {departments.map((department) => POSITION_LABELS[department]).join(" and ")} do not have a department
+                                position open in common, and one department position covers both of your choices. Please change
+                                one of your choices.
+                              </p>
+                            </div>
+                          )
                         )}
 
                         {needsWorkSamples(formData) && (

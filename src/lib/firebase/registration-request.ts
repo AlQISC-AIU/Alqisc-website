@@ -5,9 +5,6 @@ import { applicationId, getRegistrationConfig } from "./committee-registration";
 import { createRateLimiter } from "@/lib/rate-limit";
 import {
     isAcceptingApplications,
-    isPositionOpen,
-    positionLabel,
-    REJECTED_POSITION_FIELDS,
     validateApplicationInput,
     type ApplicationInput,
     type RegistrationConfig,
@@ -25,9 +22,9 @@ const byAddress = createRateLimiter({ limit: 120, windowMs: WINDOW_MS });
 // more than a few attempts for one student email.
 const byEmail = createRateLimiter({ limit: 10, windowMs: WINDOW_MS });
 
-// Only these may be sent, each at most once. Anything else that names a
-// position, including a second copy of a field, is treated as tampering.
-const SINGLE_VALUE_FIELDS = ["applied_position", "department_position", "student_email"];
+// Each of these may be sent once, as plain text. A second copy of a choice, or
+// a list in place of one, is treated as tampering rather than guessed at.
+const SINGLE_VALUE_FIELDS = ["first_choice", "second_choice", "department_position", "student_email"];
 
 export function registrationError(error: string, status = 400, extra: Record<string, unknown> = {}) {
     return NextResponse.json({ error, ...extra }, { status });
@@ -60,9 +57,8 @@ export async function checkRegistrationRequest(request: Request, entries: [strin
     }
 
     const repeated = SINGLE_VALUE_FIELDS.some((name) => entries.filter(([key]) => key === name).length > 1);
-    const unexpected = REJECTED_POSITION_FIELDS.some((name) => name in fields && String(fields[name] ?? "").trim() !== "");
-    if (repeated || unexpected || SINGLE_VALUE_FIELDS.some((name) => name in fields && typeof fields[name] !== "string")) {
-        return refuse(registrationError("An application can name one position only."));
+    if (repeated || SINGLE_VALUE_FIELDS.some((name) => name in fields && typeof fields[name] !== "string")) {
+        return refuse(registrationError("An application has one first choice, one second choice and one department position."));
     }
 
     const email = typeof fields.student_email === "string" ? fields.student_email.trim().toLowerCase() : "";
@@ -73,16 +69,10 @@ export async function checkRegistrationRequest(request: Request, entries: [strin
         return refuse(registrationError("Committee registration is currently closed.", 403));
     }
 
-    const result = validateApplicationInput(fields);
+    // Checked against what the admin has opened, with the same rules the form uses.
+    const result = validateApplicationInput(fields, config);
     if (!result.ok) return refuse(registrationError(result.error, 400, { errors: result.errors }));
     const application = result.value;
-
-    if (!isPositionOpen(config, application.applied_position, application.department_position)) {
-        const label = positionLabel(application.applied_position, application.department_position);
-        return refuse(registrationError(`Applications for ${label} are closed.`, 403, {
-            errors: { applied_position: `Applications for ${label} are closed. Please choose another position.` },
-        }));
-    }
 
     return { ok: true, config, application, id: applicationId(config.term, application.student_email) };
 }

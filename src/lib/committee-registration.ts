@@ -2,9 +2,8 @@
 // public form, the public API routes and the admin review page.
 //
 // The questions follow the committee's official form, "New Committee
-// Recruitment 2026/27 Session", with two changes the committee asked for: the
-// unnamed dropdown (question 9) is gone, and applicants apply for exactly one
-// position instead of giving a first and second choice.
+// Recruitment 2026/27 Session". Its unnamed dropdown (question 9) was added to
+// the Google Form by accident and is left out at the committee's request.
 
 export const EDUCATION_LEVELS = ["lc", "foundation", "bachelor"] as const;
 export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
@@ -22,9 +21,10 @@ export const YEARS_OF_STUDY = ["Year 1", "Year 2", "Year 3"] as const;
 // Positions
 //
 // AL-QISC has two separate structures. The Top Committee is central and has no
-// department. Each department has the same four position levels. An application
-// names exactly one position: either one Top Committee position, or one
-// department together with one position level in it.
+// department. Each department has the same four position levels. One
+// application gives a first and a second choice, each either a Top Committee
+// position or a department, plus one department position when a department is
+// among the choices.
 // ---------------------------------------------------------------------------
 
 // Top Committee positions that can be recruited through this form.
@@ -41,7 +41,7 @@ export const DEPARTMENTS = [
 ] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
-/** What the applicant picks first: a Top Committee position or a department. */
+/** A first or second choice: a Top Committee position or a department. */
 export type AppliedPosition = TopPosition | Department;
 export const APPLIED_POSITIONS: readonly AppliedPosition[] = [...TOP_POSITIONS, ...DEPARTMENTS];
 
@@ -68,8 +68,6 @@ export const DEPARTMENT_POSITION_LABELS: Record<DepartmentPosition, string> = {
     exco_member: "EXCO Member",
 };
 
-export const POSITION_TYPE_LABELS = { top_committee: "Top Committee", department: "Department" } as const;
-export type PositionType = keyof typeof POSITION_TYPE_LABELS;
 
 // Multimedia and ICT applicants are asked to share samples of their work.
 export const WORK_SAMPLE_DEPARTMENTS: readonly Department[] = ["exco_multimedia", "exco_ict"];
@@ -198,7 +196,7 @@ export function normalizeOpenPositions(raw: { open_top_positions?: unknown; open
     };
 }
 
-type Availability = Pick<RegistrationConfig, "open_top_positions" | "open_department_positions">;
+export type Availability = Pick<RegistrationConfig, "open_top_positions" | "open_department_positions">;
 
 export function isDepartment(position: unknown): position is Department {
     return includes(DEPARTMENTS, position);
@@ -226,12 +224,6 @@ export function countOpenPositions(config: Availability) {
         + DEPARTMENTS.reduce((total, department) => total + openDepartmentPositions(config, department).length, 0);
 }
 
-/** Whether the exact position an application names is open. */
-export function isPositionOpen(config: Availability, position: unknown, departmentPosition: unknown) {
-    if (isTopPosition(position)) return config.open_top_positions.includes(position);
-    return openDepartmentPositions(config, position).some((open) => open === departmentPosition);
-}
-
 /** e.g. "General Secretary" or "EXCO Da'wah · Head of Department". */
 export function positionLabel(position: unknown, departmentPosition: unknown) {
     if (!includes(APPLIED_POSITIONS, position)) return "";
@@ -239,7 +231,7 @@ export function positionLabel(position: unknown, departmentPosition: unknown) {
     return isDepartment(position) && department ? `${POSITION_LABELS[position]} · ${department}` : POSITION_LABELS[position];
 }
 
-/** Every position an application can name, in display order, for admin grouping and filters. */
+/** Every way a choice can read, in display order; the admin page groups applications by these. */
 export const ALL_POSITION_LABELS: readonly string[] = [
     ...TOP_POSITIONS.map((position) => positionLabel(position, "")),
     ...DEPARTMENTS.flatMap((department) => DEPARTMENT_POSITIONS.map((position) => positionLabel(department, position))),
@@ -281,9 +273,12 @@ export interface ApplicationInput {
     joined_programs: JoinedPrograms;
     programs_joined: string;
     experience: string;
-    // The one position applied for
-    applied_position: AppliedPosition;
-    department_position: DepartmentPosition | ""; // Department applications only
+    // Line of leadership
+    first_choice: AppliedPosition;
+    // Required whenever more than one choice is open.
+    second_choice: AppliedPosition | "";
+    // Asked when either choice is a department.
+    department_position: DepartmentPosition | "";
     // Motivation and commitment
     motivation: string;
     accept_other_position: YesNo;
@@ -305,8 +300,10 @@ export interface CommitteeApplication extends Partial<ApplicationInput> {
     phone: string;
     student_id: string;
     motivation: string;
-    position_type?: PositionType;
-    position_label?: string;
+    // Each choice as it was shown to the applicant, e.g. "EXCO Da'wah · Head of
+    // Department". The earlier form stored a department name here.
+    first_choice_name: string;
+    second_choice_name: string;
     photo_path: string;
     photo_type: string;
     document_path?: string;
@@ -321,24 +318,33 @@ export interface CommitteeApplication extends Partial<ApplicationInput> {
     personal_email?: string;
     current_member_name?: string;
     current_member_role?: string;
-    first_choice?: string;
-    second_choice?: string;
-    first_choice_name?: string;
-    second_choice_name?: string;
 }
-
-// Fields the earlier form sent, or that would name a second position. A
-// submission carrying any of them is refused rather than guessed at.
-export const REJECTED_POSITION_FIELDS = [
-    "position", "first_choice", "second_choice", "current_member_id", "top_position", "department", "positions",
-] as const;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** True when the application is for Multimedia or ICT, which ask for work samples. */
-export function needsWorkSamples(value: { applied_position?: unknown }) {
-    return includes(WORK_SAMPLE_DEPARTMENTS, value.applied_position);
+type Choices = { first_choice?: unknown; second_choice?: unknown };
+
+/** The departments among an application's two choices. */
+export function chosenDepartments(value: Choices): Department[] {
+    return [value.first_choice, value.second_choice].filter(isDepartment);
+}
+
+/**
+ * The department positions an applicant can pick: those open in every
+ * department they chose. The form has one department position for the whole
+ * application, so it has to be open wherever it would apply.
+ */
+export function selectableDepartmentPositions(config: Availability, value: Choices): DepartmentPosition[] {
+    const departments = chosenDepartments(value);
+    if (departments.length === 0) return [];
+    return DEPARTMENT_POSITIONS.filter((position) =>
+        departments.every((department) => openDepartmentPositions(config, department).includes(position)));
+}
+
+/** True when either choice is Multimedia or ICT, which ask for work samples. */
+export function needsWorkSamples(value: Choices) {
+    return includes(WORK_SAMPLE_DEPARTMENTS, value.first_choice) || includes(WORK_SAMPLE_DEPARTMENTS, value.second_choice);
 }
 
 /** Checks the file's leading bytes so a renamed non-image is rejected. */
@@ -438,28 +444,29 @@ export function normalizeApplicationInput(raw: unknown): ApplicationInput {
         joined_programs: text(body.joined_programs, 10) as JoinedPrograms,
         programs_joined: text(body.programs_joined, LONG_ANSWER),
         experience: text(body.experience, LONG_ANSWER),
-        applied_position: text(body.applied_position, 40) as AppliedPosition,
+        first_choice: text(body.first_choice, 40) as AppliedPosition,
+        second_choice: text(body.second_choice, 40) as AppliedPosition | "",
         department_position: text(body.department_position, 40) as DepartmentPosition | "",
         motivation: text(body.motivation, LONG_ANSWER),
         accept_other_position: text(body.accept_other_position, 10) as YesNo,
         other_club_commitment: text(body.other_club_commitment, 20) as OtherClubCommitment | "",
     };
-    // Answers to questions that do not apply are discarded. The department
-    // position is deliberately not among them: a Top Committee application
-    // that also names one is refused below instead of being quietly accepted.
+    // Answers to questions that do not apply are discarded.
     if (value.education_level !== "bachelor") {
         value.year_of_study = "";
         value.programme = "";
     }
     if (value.joined_programs !== "yes") value.programs_joined = "";
+    if (chosenDepartments(value).length === 0) value.department_position = "";
     return value;
 }
 
 /**
- * Field-level validation shared by the form and the API. Whether the chosen
- * position is open depends on the admin's settings and is checked separately.
+ * Validation shared by the form and the API, so both apply the same rules.
+ * `open` is what the admin has opened for applications; without it only the
+ * rules that do not depend on those settings are checked.
  */
-export function getApplicationErrors(value: ApplicationInput): ApplicationErrors {
+export function getApplicationErrors(value: ApplicationInput, open?: Availability): ApplicationErrors {
     const errors: ApplicationErrors = {};
     const tooLong = `Keep your answer to ${LONG_ANSWER} characters or fewer.`;
 
@@ -502,14 +509,37 @@ export function getApplicationErrors(value: ApplicationInput): ApplicationErrors
     if (value.programs_joined.length > LONG_ANSWER) errors.programs_joined = tooLong;
     if (value.experience.length > LONG_ANSWER) errors.experience = tooLong;
 
-    if (!includes(APPLIED_POSITIONS, value.applied_position)) {
-        errors.applied_position = "Select the position you are applying for.";
-    } else if (isDepartment(value.applied_position)) {
+    const choices = open ? openAppliedPositions(open) : APPLIED_POSITIONS;
+    const closed = (choice: AppliedPosition) => `${POSITION_LABELS[choice]} is not open for applications. Please choose another.`;
+    if (!includes(APPLIED_POSITIONS, value.first_choice)) {
+        errors.first_choice = "Select your first choice.";
+    } else if (!choices.includes(value.first_choice)) {
+        errors.first_choice = closed(value.first_choice);
+    }
+    // With a single choice open there is nothing left to pick as a second.
+    if (!value.second_choice) {
+        if (choices.length > 1) errors.second_choice = "Select your second choice.";
+    } else if (!includes(APPLIED_POSITIONS, value.second_choice)) {
+        errors.second_choice = "Select your second choice from the list.";
+    } else if (value.second_choice === value.first_choice) {
+        errors.second_choice = "Your second choice must be different from your first choice.";
+    } else if (!choices.includes(value.second_choice)) {
+        errors.second_choice = closed(value.second_choice);
+    }
+
+    const departments = chosenDepartments(value);
+    if (departments.length > 0) {
         if (!includes(DEPARTMENT_POSITIONS, value.department_position)) {
-            errors.department_position = "Select the position you are applying for in this department.";
+            errors.department_position = "Select the department position you are applying for.";
+        } else if (open) {
+            const position = value.department_position;
+            // A department that is closed altogether is already reported on its choice.
+            const shut = departments.find((department) =>
+                choices.includes(department) && !openDepartmentPositions(open, department).includes(position));
+            if (shut) {
+                errors.department_position = `${DEPARTMENT_POSITION_LABELS[position]} is not open for applications in ${POSITION_LABELS[shut]}.`;
+            }
         }
-    } else if (value.department_position) {
-        errors.department_position = "A Top Committee application cannot also name a department position.";
     }
 
     if (!value.motivation) {
@@ -531,9 +561,9 @@ type ValidationResult =
     | { ok: true; value: ApplicationInput }
     | { ok: false; error: string; errors: ApplicationErrors };
 
-export function validateApplicationInput(raw: unknown): ValidationResult {
+export function validateApplicationInput(raw: unknown, open?: Availability): ValidationResult {
     const value = normalizeApplicationInput(raw);
-    const errors = getApplicationErrors(value);
+    const errors = getApplicationErrors(value, open);
     const first = Object.values(errors)[0];
     return first ? { ok: false, error: first, errors } : { ok: true, value };
 }

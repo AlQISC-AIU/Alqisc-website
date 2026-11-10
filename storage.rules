@@ -36,6 +36,10 @@ service firebase.storage {
     }
 
     match /committee-application-uploads/{ticketId}/photo {
+      // While the ticket lives its holder may send the file again, which is
+      // how an interrupted upload is retried. The ticket id is a long random
+      // value only that applicant's browser is given, and the server deletes
+      // the ticket on submission, after which nothing can be written here.
       allow create: if request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
         && firestore.exists(/databases/(default)/documents/committee_upload_tickets/$(ticketId))

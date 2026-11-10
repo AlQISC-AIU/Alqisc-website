@@ -39,11 +39,13 @@ interface RadioGroupProps<T extends string> {
   twoColumns?: boolean;
   /** Optional questions can be cleared again once answered. */
   onClear?: () => void;
+  /** An option that cannot be picked here, with the reason shown beside it. */
+  unavailable?: { value: string; reason: string };
 }
 
 /** A single-choice question shown as tappable cards. */
 export function RadioGroup<T extends string>({
-  name, legend, options, value, onChange, required, hint, error, twoColumns, onClear,
+  name, legend, options, value, onChange, required, hint, error, twoColumns, onClear, unavailable,
 }: RadioGroupProps<T>) {
   const groups = [...new Set(options.map((option) => option.group || ""))];
   const describedBy = [hint ? `${name}-hint` : "", error ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined;
@@ -61,12 +63,14 @@ export function RadioGroup<T extends string>({
             <div className={cn("grid gap-2.5", twoColumns && "sm:grid-cols-2")}>
               {options.filter((option) => (option.group || "") === group).map((option) => {
                 const selected = value === option.value;
+                const disabled = !selected && unavailable?.value === option.value;
                 return (
                   <label
                     key={option.value}
                     className={cn(
-                      "flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-[var(--primary)]/30",
-                      selected
+                      "flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-[var(--primary)]/30",
+                      disabled ? "cursor-not-allowed border-dashed border-[var(--primary)]/15 bg-[var(--light)] text-[var(--gray)]" : "cursor-pointer",
+                      disabled ? "" : selected
                         ? "border-[var(--primary)] bg-[var(--primary)]/5 font-semibold text-[var(--dark)]"
                         : error ? "border-red-300 text-[var(--dark)]" : "border-[var(--primary)]/15 text-[var(--dark)] hover:border-[var(--primary)]/40"
                     )}
@@ -79,6 +83,7 @@ export function RadioGroup<T extends string>({
                       checked={selected}
                       onChange={onChange}
                       required={required}
+                      disabled={disabled}
                       className="sr-only"
                     />
                     <span
@@ -90,7 +95,10 @@ export function RadioGroup<T extends string>({
                     >
                       {selected && <span className="h-2 w-2 rounded-full bg-white" />}
                     </span>
-                    {option.label}
+                    <span>
+                      {option.label}
+                      {disabled && <span className="block text-xs">{unavailable?.reason}</span>}
+                    </span>
                   </label>
                 );
               })}

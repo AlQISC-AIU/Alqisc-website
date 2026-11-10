@@ -9,7 +9,6 @@ import {
     JOINED_PROGRAMS_LABELS,
     LEGACY_POSITION_LABELS,
     OTHER_CLUB_COMMITMENT_LABELS,
-    POSITION_TYPE_LABELS,
     STATUS_LABELS,
     YES_NO_LABELS,
     type CommitteeApplication,
@@ -89,8 +88,8 @@ export async function POST(request: Request) {
     sheet.columns = [
         { header: "Photo", key: "photo", width: 18 },
         { header: "Name", key: "name", width: 28 },
-        { header: "Position applied for", key: "position", width: 44 },
-        { header: "Top Committee or department", key: "position_type", width: 26 },
+        { header: "First choice", key: "first", width: 44 },
+        { header: "Second choice", key: "second", width: 44 },
         { header: "Department position", key: "department_position", width: 22 },
         { header: "Status", key: "status", width: 13 },
         { header: "Student email", key: "student_email", width: 32 },
@@ -110,7 +109,7 @@ export async function POST(request: Request) {
         { header: "Supporting document", key: "document", width: 20 },
         ...(hasLegacy ? [
             { header: "Position (earlier form)", key: "legacy_position", width: 22 },
-            { header: "Department choices (earlier form)", key: "legacy_choices", width: 30 },
+
             { header: "Personal email (earlier form)", key: "personal_email", width: 30 },
         ] : []),
         { header: "Admin notes", key: "notes", width: 40 },
@@ -127,8 +126,8 @@ export async function POST(request: Request) {
     applications.forEach((application, index) => {
         const row = sheet.addRow({
             name: application.full_name,
-            position: application.position_label || "",
-            position_type: label(POSITION_TYPE_LABELS, application.position_type),
+            first: application.first_choice_name || "",
+            second: application.second_choice_name || "",
             department_position: label(DEPARTMENT_POSITION_LABELS, application.department_position),
             status: STATUS_LABELS[application.status] || application.status,
             student_email: application.student_email || "",
@@ -147,7 +146,7 @@ export async function POST(request: Request) {
             other_club_commitment: label(OTHER_CLUB_COMMITMENT_LABELS, application.other_club_commitment),
             document: application.document_path ? "Attached (download in admin)" : "None",
             legacy_position: label(LEGACY_POSITION_LABELS, application.position),
-            legacy_choices: [application.first_choice_name, application.second_choice_name].filter(Boolean).join(", "),
+
             personal_email: application.personal_email || "",
             notes: application.admin_notes,
             term: application.term,
