@@ -16,6 +16,7 @@ const SERVER_ONLY_DOCS = [
     "authorized_admins/admin@example.com",
     "committee_applications/abc",
     "committee_registration_config/current",
+    "committee_upload_tickets/abc",
     "private_config/instagram",
 ];
 

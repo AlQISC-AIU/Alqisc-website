@@ -27,6 +27,23 @@ const set = (path, data) => batch.set(db.doc(path), data);
 
 set("site_settings/hero_title", { key: "hero_title", value: "AL-QISC (local emulator)", updated_at: now });
 set("site_settings/contact_email", { key: "contact_email", value: "club@alqisc.test", updated_at: now });
+// Committee registration is open locally so the form at /join can be tried out.
+// Positions are opened unevenly on purpose, to show that each department is
+// set on its own. No deadline is set, so the local form never closes by itself;
+// set one under Committee Registration in the admin console to see it displayed.
+set("committee_registration_config/current", {
+    is_open: true, term: "2026/27", deadline: "", intro: "", updated_at: now,
+    open_top_positions: ["general_secretary", "general_treasurer"],
+    open_department_positions: {
+        exco_dawah: ["head", "first_deputy_head", "department_secretary", "exco_member"],
+        exco_co_curricular: ["first_deputy_head", "exco_member"],
+        exco_multimedia: ["exco_member"],
+        exco_education: ["head", "exco_member"],
+        exco_ict: ["department_secretary", "exco_member"],
+        exco_sister_affairs: [],
+    },
+});
+set("site_settings/committee_registration_open", { key: "committee_registration_open", value: "true", updated_at: now });
 set("departments/exco", {
     slug: "exco", name: "EXCO", full_name: "Executive Committee", description: "Sample department.",
     image_url: "", objectives: [], responsibilities: [], is_active: true, display_order: 0,

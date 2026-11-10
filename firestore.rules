@@ -66,8 +66,9 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // authorized_admins, committee_applications, committee_registration_config
-    // and private_config are server-only and fall through to the deny below.
+    // authorized_admins, committee_applications, committee_registration_config,
+    // committee_upload_tickets and private_config are server-only and fall
+    // through to the deny below. storage.rules reads committee_upload_tickets.
     match /{document=**} {
       allow read, write: if false;
     }

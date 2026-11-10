@@ -2,12 +2,15 @@ import ExcelJS from "exceljs";
 import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminDb, verifyAdminSession } from "@/lib/firebase/admin";
-import { APPLICATIONS_COLLECTION, readApplicationPhoto } from "@/lib/firebase/committee-registration";
+import { APPLICATIONS_COLLECTION, readApplicationFile } from "@/lib/firebase/committee-registration";
 import {
-    isDepartmentPosition,
-    isLeadershipPosition,
-    POSITION_LABELS,
+    DEPARTMENT_POSITION_LABELS,
+    EDUCATION_LEVEL_LABELS,
+    JOINED_PROGRAMS_LABELS,
+    LEGACY_POSITION_LABELS,
+    OTHER_CLUB_COMMITMENT_LABELS,
     STATUS_LABELS,
+    YES_NO_LABELS,
     type CommitteeApplication,
 } from "@/lib/committee-registration";
 
@@ -23,7 +26,7 @@ const PHOTO_CONCURRENCY = 8;
 
 async function thumbnail(path: string): Promise<Buffer | null> {
     try {
-        const original = await readApplicationPhoto(path);
+        const original = await readApplicationFile(path);
         if (!original) return null;
         return await sharp(original)
             .rotate()
@@ -35,6 +38,11 @@ async function thumbnail(path: string): Promise<Buffer | null> {
         console.error("Could not prepare applicant photo for export", path, error);
         return null;
     }
+}
+
+/** The display label for a stored answer, or an empty cell when it was not given. */
+function label(labels: Record<string, string>, value: string | undefined) {
+    return value ? labels[value] || value : "";
 }
 
 /** Runs `task` over `items` with at most `limit` in flight. */
@@ -74,22 +82,36 @@ export async function POST(request: Request) {
     workbook.creator = "AL-QISC Admin";
     workbook.created = new Date();
     const sheet = workbook.addWorksheet("Applications", { views: [{ state: "frozen", ySplit: 1 }] });
+    // Records from the earlier form carry two answers the current form no
+    // longer asks; their columns appear only when such records are exported.
+    const hasLegacy = applications.some((application) => application.position || application.personal_email);
     sheet.columns = [
         { header: "Photo", key: "photo", width: 18 },
-        { header: "Name", key: "name", width: 26 },
-        { header: "Position", key: "position", width: 22 },
-        { header: "Department (1st)", key: "first", width: 22 },
-        { header: "Department (2nd)", key: "second", width: 22 },
+        { header: "Name", key: "name", width: 28 },
+        { header: "First choice", key: "first", width: 44 },
+        { header: "Second choice", key: "second", width: 44 },
+        { header: "Department position", key: "department_position", width: 22 },
         { header: "Status", key: "status", width: 13 },
         { header: "Student email", key: "student_email", width: 32 },
-        { header: "Personal email", key: "personal_email", width: 30 },
-        { header: "Phone", key: "phone", width: 18 },
+        { header: "Contact number", key: "phone", width: 18 },
         { header: "Student ID", key: "student_id", width: 16 },
-        { header: "Programme", key: "programme", width: 28 },
-        { header: "Year", key: "year", width: 13 },
-        { header: "Current committee record", key: "current_member", width: 28 },
-        { header: "Why they want to join", key: "motivation", width: 60 },
-        { header: "Experience & skills", key: "experience", width: 50 },
+        { header: "Nationality", key: "nationality", width: 16 },
+        { header: "Level of education", key: "education_level", width: 18 },
+        { header: "Year of study", key: "year", width: 13 },
+        { header: "School, programme & cohort", key: "programme", width: 30 },
+        { header: "What they know about Al-Qisc", key: "about_alqisc", width: 50 },
+        { header: "Joined our programs", key: "joined_programs", width: 18 },
+        { header: "Programs joined", key: "programs_joined", width: 40 },
+        { header: "Committee experience", key: "experience", width: 50 },
+        { header: "Suitability & motivation", key: "motivation", width: 60 },
+        { header: "Accepts another position", key: "accept_other_position", width: 22 },
+        { header: "If also serving another club", key: "other_club_commitment", width: 40 },
+        { header: "Supporting document", key: "document", width: 20 },
+        ...(hasLegacy ? [
+            { header: "Position (earlier form)", key: "legacy_position", width: 22 },
+
+            { header: "Personal email (earlier form)", key: "personal_email", width: 30 },
+        ] : []),
         { header: "Admin notes", key: "notes", width: 40 },
         { header: "Term", key: "term", width: 12 },
         { header: "Submitted", key: "submitted", width: 20 },
@@ -104,21 +126,28 @@ export async function POST(request: Request) {
     applications.forEach((application, index) => {
         const row = sheet.addRow({
             name: application.full_name,
-            position: POSITION_LABELS[application.position] || application.position,
-            first: isDepartmentPosition(application.position) ? application.first_choice_name : "",
-            second: isDepartmentPosition(application.position) ? application.second_choice_name : "",
+            first: application.first_choice_name || "",
+            second: application.second_choice_name || "",
+            department_position: label(DEPARTMENT_POSITION_LABELS, application.department_position),
             status: STATUS_LABELS[application.status] || application.status,
             student_email: application.student_email || "",
-            personal_email: application.personal_email || "",
             phone: application.phone,
             student_id: application.student_id,
-            programme: application.programme,
-            year: application.year_of_study,
-            current_member: isLeadershipPosition(application.position)
-                ? [application.current_member_name, application.current_member_role].filter(Boolean).join(" · ")
-                : "",
+            nationality: application.nationality || "",
+            education_level: label(EDUCATION_LEVEL_LABELS, application.education_level),
+            year: application.year_of_study || "",
+            programme: application.programme || "",
+            about_alqisc: application.about_alqisc || "",
+            joined_programs: label(JOINED_PROGRAMS_LABELS, application.joined_programs),
+            programs_joined: application.programs_joined || "",
+            experience: application.experience || "",
             motivation: application.motivation,
-            experience: application.experience,
+            accept_other_position: label(YES_NO_LABELS, application.accept_other_position),
+            other_club_commitment: label(OTHER_CLUB_COMMITMENT_LABELS, application.other_club_commitment),
+            document: application.document_path ? "Attached (download in admin)" : "None",
+            legacy_position: label(LEGACY_POSITION_LABELS, application.position),
+
+            personal_email: application.personal_email || "",
             notes: application.admin_notes,
             term: application.term,
             submitted: application.created_at ? new Date(application.created_at) : "",

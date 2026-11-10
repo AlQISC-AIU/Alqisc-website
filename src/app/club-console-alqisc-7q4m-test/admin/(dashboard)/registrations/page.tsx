@@ -2,24 +2,33 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { AdminTopbar } from "@/components/admin/admin-layout";
-import { ChevronDown, Crown, Download, ExternalLink, ImageDown, Loader2, Save, Search, Trash2, UserPlus } from "lucide-react";
+import { ChevronDown, Download, ExternalLink, FileDown, ImageDown, Loader2, Save, Search, Trash2, UserPlus } from "lucide-react";
 import { notifications } from "@/components/ui/notification-provider";
 import { cn } from "@/lib/utils";
 import {
+    ALL_POSITION_LABELS,
     APPLICATION_STATUSES,
+    APPLIED_POSITIONS,
+    countOpenPositions,
     DEFAULT_REGISTRATION_CONFIG,
+    DEPARTMENT_POSITION_LABELS,
     DEPARTMENT_POSITIONS,
-    EXCO_POSITIONS,
-    isDepartmentPosition,
-    isLeadershipPosition,
+    DEPARTMENTS,
+    EDUCATION_LEVEL_LABELS,
     isPastDeadline,
+    JOINED_PROGRAMS_LABELS,
+    LEGACY_POSITION_LABELS,
+    OTHER_CLUB_COMMITMENT_LABELS,
     POSITION_LABELS,
     STATUS_LABELS,
+    TOP_POSITIONS,
+    YES_NO_LABELS,
     type ApplicationStatus,
     type CommitteeApplication,
-    type CommitteePosition,
+    type Department,
+    type DepartmentPosition,
     type RegistrationConfig,
-    type RegistrationDepartment,
+    type TopPosition,
 } from "@/lib/committee-registration";
 
 const STATUS_STYLES: Record<ApplicationStatus, string> = {
@@ -46,12 +55,44 @@ function photoUrl(application: CommitteeApplication, download = false) {
     return `/api/admin/committee-registration/photo?id=${application.id}${download ? "&download" : ""}`;
 }
 
-/** e.g. "Deputy Head · Media" for department roles, "Treasurer" for exco roles. */
+function documentUrl(application: CommitteeApplication) {
+    return `/api/admin/committee-registration/document?id=${application.id}`;
+}
+
+/** The display label for a stored answer, or "" when it was not given. */
+function label(labels: Record<string, string>, value: string | undefined) {
+    return value ? labels[value] || value : "";
+}
+
+/**
+ * The applicant's first choice, e.g. "EXCO ICT & Technical · EXCO Member".
+ * Records from the earlier form show their old position, e.g. "Deputy Head · Media".
+ */
 function roleLabel(application: CommitteeApplication) {
-    const label = POSITION_LABELS[application.position];
-    return isDepartmentPosition(application.position) && application.first_choice_name
-        ? `${label} · ${application.first_choice_name}`
-        : label;
+    const legacy = label(LEGACY_POSITION_LABELS, application.position);
+    return [legacy, application.first_choice_name].filter(Boolean).join(" · ") || "No choice recorded";
+}
+
+/** Applications under the position each one put first, in the order positions are listed. */
+function groupByFirstChoice(applications: CommitteeApplication[]) {
+    const groups = new Map<string, CommitteeApplication[]>();
+    for (const application of applications) {
+        const key = roleLabel(application);
+        groups.set(key, [...(groups.get(key) || []), application]);
+    }
+    const order = (key: string) => {
+        const index = ALL_POSITION_LABELS.indexOf(key);
+        return index === -1 ? ALL_POSITION_LABELS.length : index;
+    };
+    return [...groups.entries()]
+        .sort(([a], [b]) => order(a) - order(b) || a.localeCompare(b))
+        .map(([position, items]) => ({ position, applications: items }));
+}
+
+const checkboxChipClassName = "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition";
+
+function chipClassName(open: boolean) {
+    return cn(checkboxChipClassName, open ? "border-[var(--primary)] bg-[var(--primary)]/5 text-[var(--primary)]" : "border-gray-200 text-[var(--gray)]");
 }
 
 function Toggle({ checked, onChange, label, description }: { checked: boolean; onChange: (value: boolean) => void; label: string; description: string }) {
@@ -69,7 +110,6 @@ function Toggle({ checked, onChange, label, description }: { checked: boolean; o
 
 export default function RegistrationsPage() {
     const [config, setConfig] = useState<RegistrationConfig>(DEFAULT_REGISTRATION_CONFIG);
-    const [departments, setDepartments] = useState<RegistrationDepartment[]>([]);
     const [applications, setApplications] = useState<CommitteeApplication[]>([]);
     const [loading, setLoading] = useState(true);
     const [savingConfig, setSavingConfig] = useState(false);
@@ -78,8 +118,8 @@ export default function RegistrationsPage() {
     const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
     const [search, setSearch] = useState("");
     const [termFilter, setTermFilter] = useState("");
-    const [positionFilter, setPositionFilter] = useState("");
-    const [departmentFilter, setDepartmentFilter] = useState("");
+    const [choiceFilter, setChoiceFilter] = useState("");
+    const [departmentPositionFilter, setDepartmentPositionFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [exporting, setExporting] = useState(false);
 
@@ -90,11 +130,9 @@ export default function RegistrationsPage() {
             if (!response.ok) throw new Error(await readError(response, "Unable to load registrations."));
             const body = (await response.json()) as {
                 config: RegistrationConfig;
-                departments: RegistrationDepartment[];
                 applications: CommitteeApplication[];
             };
             setConfig(body.config);
-            setDepartments(body.departments);
             setApplications(body.applications);
             setTermFilter((current) => current || body.config.term);
         } catch (error) {
@@ -173,20 +211,22 @@ export default function RegistrationsPage() {
         const query = search.trim().toLowerCase();
         return applications.filter((application) => {
             if (termFilter && application.term !== termFilter) return false;
-            if (positionFilter && application.position !== positionFilter) return false;
+            if (choiceFilter && application.first_choice !== choiceFilter && application.second_choice !== choiceFilter) return false;
             if (statusFilter && application.status !== statusFilter) return false;
-            if (departmentFilter && application.first_choice !== departmentFilter && application.second_choice !== departmentFilter) return false;
+            if (departmentPositionFilter && application.department_position !== departmentPositionFilter) return false;
             if (!query) return true;
-            return [application.full_name, application.student_email, application.personal_email, application.student_id, application.phone, application.programme]
+            return [application.full_name, application.student_email, application.personal_email, application.student_id, application.phone, application.programme, application.nationality]
                 .some((value) => (value || "").toLowerCase().includes(query));
         });
-    }, [applications, search, termFilter, positionFilter, statusFilter, departmentFilter]);
+    }, [applications, search, termFilter, choiceFilter, statusFilter, departmentPositionFilter]);
+
+    const grouped = useMemo(() => groupByFirstChoice(filtered), [filtered]);
 
     const counts = useMemo(() => {
         const scoped = applications.filter((application) => !termFilter || application.term === termFilter);
         return {
             total: scoped.length,
-            leadership: scoped.filter((application) => isLeadershipPosition(application.position)).length,
+            shortlisted: scoped.filter((application) => application.status === "shortlisted").length,
             pending: scoped.filter((application) => application.status === "pending").length,
             accepted: scoped.filter((application) => application.status === "accepted").length,
         };
@@ -199,7 +239,7 @@ export default function RegistrationsPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 // Export exactly what the filters show, in the same order.
-                body: JSON.stringify({ ids: filtered.map((application) => application.id), term: termFilter }),
+                body: JSON.stringify({ ids: grouped.flatMap((group) => group.applications.map((application) => application.id)), term: termFilter }),
             });
             if (!response.ok) throw new Error(await readError(response, "Unable to export applications."));
             const fileName = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") || "")?.[1] || "committee-applications.xlsx";
@@ -216,24 +256,28 @@ export default function RegistrationsPage() {
         }
     };
 
-    const toggleDepartment = (slug: string, checked: boolean) => {
-        setConfig((current) => {
-            // An empty list means every department is open; expand it before narrowing.
-            const selected = current.open_departments.length ? current.open_departments : departments.map((department) => department.slug);
-            const next = checked ? [...new Set([...selected, slug])] : selected.filter((item) => item !== slug);
-            return { ...current, open_departments: next.length === departments.length ? [] : next };
-        });
+    const toggleTopPosition = (position: TopPosition, open: boolean) => {
+        setConfig((current) => ({
+            ...current,
+            open_top_positions: TOP_POSITIONS.filter((item) => item === position ? open : current.open_top_positions.includes(item)),
+        }));
     };
 
-    const togglePosition = (position: CommitteePosition, checked: boolean) => {
-        setConfig((current) => {
-            const next = checked ? [...current.open_positions, position] : current.open_positions.filter((item) => item !== position);
-            return { ...current, open_positions: Object.keys(POSITION_LABELS).filter((item) => next.includes(item as CommitteePosition)) as CommitteePosition[] };
-        });
+    // Each department keeps its own list, so opening a position in one
+    // department leaves every other department as it was.
+    const toggleDepartmentPosition = (department: Department, position: DepartmentPosition, open: boolean) => {
+        setConfig((current) => ({
+            ...current,
+            open_department_positions: {
+                ...current.open_department_positions,
+                [department]: DEPARTMENT_POSITIONS.filter((item) =>
+                    item === position ? open : current.open_department_positions[department].includes(item)),
+            },
+        }));
     };
 
-    const isDepartmentOpen = (slug: string) => config.open_departments.length === 0 || config.open_departments.includes(slug);
     const deadlinePassed = isPastDeadline(config.deadline);
+    const openCount = countOpenPositions(config);
 
     return (
         <>
@@ -244,7 +288,7 @@ export default function RegistrationsPage() {
                         <div>
                             <h2 className="text-xl font-bold text-[var(--dark)]">New committee registration</h2>
                             <p className="mt-1 text-sm text-[var(--gray)]">
-                                Open or close the public form and review everyone who applied. President and Vice President are limited to current committee members.
+                                Open or close the public form, choose which positions take applications, and review everyone who applied. Applicants are listed under their first choice.
                             </p>
                         </div>
                         <a href="/join" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--primary)] hover:underline">
@@ -259,8 +303,8 @@ export default function RegistrationsPage() {
                             <form onSubmit={saveConfig} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <h3 className="font-bold text-[var(--dark)]">Form settings</h3>
-                                    <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", config.is_open && !deadlinePassed ? "bg-green-50 text-green-700" : "bg-gray-100 text-[var(--gray)]")}>
-                                        {config.is_open ? (deadlinePassed ? "Open but deadline passed" : "Accepting applications") : "Closed"}
+                                    <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", config.is_open && !deadlinePassed && openCount > 0 ? "bg-green-50 text-green-700" : "bg-gray-100 text-[var(--gray)]")}>
+                                        {config.is_open ? (deadlinePassed ? "Open but deadline passed" : openCount > 0 ? "Accepting applications" : "Open but no positions open") : "Closed"}
                                     </span>
                                 </div>
 
@@ -273,33 +317,50 @@ export default function RegistrationsPage() {
                                     />
                                 </div>
 
-                                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                                    {[
-                                        { title: "Executive Committee roles", positions: EXCO_POSITIONS },
-                                        { title: "Department roles (all departments)", positions: DEPARTMENT_POSITIONS },
-                                    ].map((group) => (
-                                        <div key={group.title}>
-                                            <p className="mb-2 text-xs font-semibold text-[var(--dark)]">{group.title}</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {group.positions.map((position) => {
-                                                    const open = config.open_positions.includes(position);
-                                                    return (
-                                                        <label key={position} className={cn("inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition", open ? "border-[var(--primary)] bg-[var(--primary)]/5 text-[var(--primary)]" : "border-gray-200 text-[var(--gray)]")}>
-                                                            <input type="checkbox" checked={open} onChange={(event) => togglePosition(position, event.target.checked)} className="accent-[var(--primary)]" />
-                                                            {POSITION_LABELS[position]}
-                                                            {isLeadershipPosition(position) && <Crown className="h-3.5 w-3.5" aria-label="Current committee only" />}
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <p className="mt-2 text-xs text-[var(--gray)]">
-                                    <Crown className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />President and Vice President are limited to people listed in the current committee.
-                                </p>
+                                <fieldset className="mt-5">
+                                    <legend className="text-sm font-bold text-[var(--dark)]">
+                                        Positions open for applications <span className="font-normal text-[var(--gray)]">({openCount} open)</span>
+                                    </legend>
+                                    <p className="mt-1 text-xs text-[var(--gray)]">
+                                        Applicants can only choose what is ticked here. Nothing is open until you open it, and each department is set on its own.
+                                    </p>
 
-                                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                    <p className="mb-2 mt-4 text-xs font-semibold text-[var(--dark)]">Top Committee</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {TOP_POSITIONS.map((position) => {
+                                            const open = config.open_top_positions.includes(position);
+                                            return (
+                                                <label key={position} className={chipClassName(open)}>
+                                                    <input type="checkbox" checked={open} onChange={(event) => toggleTopPosition(position, event.target.checked)} className="accent-[var(--primary)]" />
+                                                    {POSITION_LABELS[position]}
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <p className="mb-2 mt-4 text-xs font-semibold text-[var(--dark)]">Departments</p>
+                                    <div className="divide-y divide-gray-100 rounded-xl border border-gray-100">
+                                        {DEPARTMENTS.map((department) => (
+                                            <fieldset key={department} className="flex flex-col gap-2 p-3 lg:flex-row lg:items-center lg:gap-4">
+                                                <legend className="sr-only">{POSITION_LABELS[department]}</legend>
+                                                <p aria-hidden="true" className="text-xs font-semibold text-[var(--dark)] lg:w-64 lg:flex-shrink-0">{POSITION_LABELS[department]}</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {DEPARTMENT_POSITIONS.map((position) => {
+                                                        const open = config.open_department_positions[department].includes(position);
+                                                        return (
+                                                            <label key={position} className={chipClassName(open)}>
+                                                                <input type="checkbox" checked={open} onChange={(event) => toggleDepartmentPosition(department, position, event.target.checked)} className="accent-[var(--primary)]" />
+                                                                {DEPARTMENT_POSITION_LABELS[position]}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </fieldset>
+                                        ))}
+                                    </div>
+                                </fieldset>
+
+                                <div className="mt-5 grid gap-4 sm:grid-cols-2">
                                     <div>
                                         <label htmlFor="term" className="mb-1.5 block text-xs font-semibold text-[var(--dark)]">Committee term</label>
                                         <input id="term" value={config.term} maxLength={50} onChange={(event) => setConfig((current) => ({ ...current, term: event.target.value }))} placeholder="e.g. 2026/2027" className={inputClassName} />
@@ -314,22 +375,6 @@ export default function RegistrationsPage() {
                                     </div>
                                 </div>
 
-                                <div className="mt-4">
-                                    <p className="mb-2 text-xs font-semibold text-[var(--dark)]">Departments accepting new committee members</p>
-                                    {departments.length === 0 ? (
-                                        <p className="text-xs text-[var(--gray)]">No active departments yet. Add departments first.</p>
-                                    ) : (
-                                        <div className="flex flex-wrap gap-2">
-                                            {departments.map((department) => (
-                                                <label key={department.slug} className={cn("inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition", isDepartmentOpen(department.slug) ? "border-[var(--primary)] bg-[var(--primary)]/5 text-[var(--primary)]" : "border-gray-200 text-[var(--gray)]")}>
-                                                    <input type="checkbox" checked={isDepartmentOpen(department.slug)} onChange={(event) => toggleDepartment(department.slug, event.target.checked)} className="accent-[var(--primary)]" />
-                                                    {department.name}
-                                                </label>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
                                 <button type="submit" disabled={savingConfig} className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--primary-dark)] disabled:opacity-60">
                                     {savingConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                     Save settings
@@ -339,8 +384,8 @@ export default function RegistrationsPage() {
                             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                                 {[
                                     { label: "Applications", value: counts.total },
-                                    { label: "Leadership", value: counts.leadership },
                                     { label: "Pending review", value: counts.pending },
+                                    { label: "Shortlisted", value: counts.shortlisted },
                                     { label: "Accepted", value: counts.accepted },
                                 ].map((stat) => (
                                     <div key={stat.label} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -368,13 +413,13 @@ export default function RegistrationsPage() {
                                             <option value="">All terms</option>
                                             {[...new Set([config.term, ...terms])].filter(Boolean).map((term) => <option key={term} value={term}>{term}</option>)}
                                         </select>
-                                        <select value={positionFilter} onChange={(event) => setPositionFilter(event.target.value)} className={`${inputClassName} py-2.5`} aria-label="Filter by position">
-                                            <option value="">All positions</option>
-                                            {(Object.keys(POSITION_LABELS) as CommitteePosition[]).map((position) => <option key={position} value={position}>{POSITION_LABELS[position]}</option>)}
+                                        <select value={choiceFilter} onChange={(event) => setChoiceFilter(event.target.value)} className={`${inputClassName} py-2.5`} aria-label="Filter by first or second choice">
+                                            <option value="">All choices</option>
+                                            {APPLIED_POSITIONS.map((choice) => <option key={choice} value={choice}>{POSITION_LABELS[choice]}</option>)}
                                         </select>
-                                        <select value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)} className={`${inputClassName} py-2.5`} aria-label="Filter by department">
-                                            <option value="">All departments</option>
-                                            {departments.map((department) => <option key={department.slug} value={department.slug}>{department.name}</option>)}
+                                        <select value={departmentPositionFilter} onChange={(event) => setDepartmentPositionFilter(event.target.value)} className={`${inputClassName} py-2.5`} aria-label="Filter by department position">
+                                            <option value="">All department positions</option>
+                                            {DEPARTMENT_POSITIONS.map((position) => <option key={position} value={position}>{DEPARTMENT_POSITION_LABELS[position]}</option>)}
                                         </select>
                                         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={`${inputClassName} py-2.5`} aria-label="Filter by status">
                                             <option value="">All statuses</option>
@@ -389,20 +434,25 @@ export default function RegistrationsPage() {
                                         <p className="text-sm text-[var(--gray)]">{applications.length ? "No applications match these filters." : "No applications yet."}</p>
                                     </div>
                                 ) : (
-                                    <div className="divide-y divide-gray-100">
-                                        {filtered.map((application) => {
+                                    <div>
+                                        {grouped.map((group) => (
+                                        <section key={group.position} aria-label={group.position}>
+                                        <h4 className="border-y border-gray-100 bg-[var(--light)] px-5 py-2 text-xs font-bold uppercase tracking-wide text-[var(--dark)] sm:px-6">
+                                            {group.position} <span className="font-normal text-[var(--gray)]">({group.applications.length})</span>
+                                        </h4>
+                                        <div className="divide-y divide-gray-100">
+                                        {group.applications.map((application) => {
                                             const expanded = expandedId === application.id;
-                                            const leadership = isLeadershipPosition(application.position);
                                             const notes = notesDraft[application.id] ?? application.admin_notes;
                                             return (
                                                 <div key={application.id}>
                                                     <button type="button" onClick={() => setExpandedId(expanded ? "" : application.id)} className="flex w-full flex-col gap-2 px-5 py-4 text-left transition hover:bg-[var(--light)]/60 sm:flex-row sm:items-center sm:gap-4 sm:px-6" aria-expanded={expanded}>
                                                         <div className="flex min-w-0 flex-1 items-center gap-3">
-                                                            <div className={cn("relative flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full font-bold", leadership ? "bg-[var(--secondary)]/20 text-[var(--dark)]" : "bg-[var(--primary)]/10 text-[var(--primary)]")}>
+                                                            <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)]/10 font-bold text-[var(--primary)]">
                                                                 {application.photo_path ? (
                                                                     // eslint-disable-next-line @next/next/no-img-element -- private, session-authenticated image route
                                                                     <img src={photoUrl(application)} alt="" loading="lazy" className="h-full w-full object-cover" />
-                                                                ) : leadership ? <Crown className="h-5 w-5" /> : application.full_name.charAt(0).toUpperCase()}
+                                                                ) : application.full_name.charAt(0).toUpperCase()}
                                                             </div>
                                                             <div className="min-w-0">
                                                                 <p className="truncate text-sm font-semibold text-[var(--dark)]">{application.full_name}</p>
@@ -433,44 +483,49 @@ export default function RegistrationsPage() {
                                                                 </div>
                                                             )}
                                                             <dl className="grid flex-1 content-start gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                                                                {/* Answers that were not given, or that an earlier form never asked, are left out. */}
                                                                 {[
                                                                     ["Student email", application.student_email],
                                                                     ["Personal email", application.personal_email],
-                                                                    ["Phone", application.phone],
+                                                                    ["Contact number", application.phone],
                                                                     ["Student ID", application.student_id],
-                                                                    ["Programme", application.programme],
+                                                                    ["Nationality", application.nationality],
+                                                                    ["Level of education", label(EDUCATION_LEVEL_LABELS, application.education_level)],
                                                                     ["Year of study", application.year_of_study],
-                                                                    ["Position", POSITION_LABELS[application.position]],
-                                                                    ...(leadership
-                                                                        ? [["Current committee record", `${application.current_member_name}${application.current_member_role ? ` · ${application.current_member_role}` : ""}`]]
-                                                                        : []),
-                                                                    ...(isDepartmentPosition(application.position)
-                                                                        ? [["First choice", application.first_choice_name], ["Second choice", application.second_choice_name || "None"]]
-                                                                        : []),
+                                                                    ["School, programme & cohort", application.programme],
+                                                                    ["Position (earlier form)", label(LEGACY_POSITION_LABELS, application.position)],
+                                                                    ["Current committee record", [application.current_member_name, application.current_member_role].filter(Boolean).join(" · ")],
+                                                                    ["First choice", application.first_choice_name],
+                                                                    ["Second choice", application.second_choice_name],
+                                                                    ["Department position", label(DEPARTMENT_POSITION_LABELS, application.department_position)],
+                                                                    ["Joined our programs", label(JOINED_PROGRAMS_LABELS, application.joined_programs)],
+                                                                    ["Accepts another position", label(YES_NO_LABELS, application.accept_other_position)],
+                                                                    ["If also serving another club", label(OTHER_CLUB_COMMITMENT_LABELS, application.other_club_commitment)],
                                                                     ["Term", application.term],
                                                                     ["Submitted", formatDate(application.created_at)],
-                                                                ].map(([label, value]) => (
-                                                                    <div key={label}>
-                                                                        <dt className="text-xs font-medium text-[var(--gray)]">{label}</dt>
+                                                                ].filter(([, value]) => value).map(([name, value]) => (
+                                                                    <div key={name}>
+                                                                        <dt className="text-xs font-medium text-[var(--gray)]">{name}</dt>
                                                                         <dd className="mt-0.5 break-words text-[var(--dark)]">{value}</dd>
                                                                     </div>
                                                                 ))}
                                                             </dl>
                                                             </div>
-                                                            {leadership && application.current_member_name && application.current_member_name.trim().toLowerCase() !== application.full_name.trim().toLowerCase() && (
-                                                                <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                                                                    The applicant&apos;s name differs from the committee record they selected. Confirm their identity before accepting.
-                                                                </p>
-                                                            )}
-                                                            <div>
-                                                                <p className="text-xs font-medium text-[var(--gray)]">Why they want to join</p>
-                                                                <p className="mt-1 whitespace-pre-line text-sm leading-6 text-[var(--dark)]">{application.motivation}</p>
-                                                            </div>
-                                                            {application.experience && (
-                                                                <div>
-                                                                    <p className="text-xs font-medium text-[var(--gray)]">Experience & skills</p>
-                                                                    <p className="mt-1 whitespace-pre-line text-sm leading-6 text-[var(--dark)]">{application.experience}</p>
+                                                            {[
+                                                                ["What they know about Al-Qisc", application.about_alqisc],
+                                                                ["Al-Qisc programs they joined", application.programs_joined],
+                                                                ["Committee experience", application.experience],
+                                                                ["What makes them suitable and motivates them", application.motivation],
+                                                            ].filter(([, value]) => value).map(([name, value]) => (
+                                                                <div key={name}>
+                                                                    <p className="text-xs font-medium text-[var(--gray)]">{name}</p>
+                                                                    <p className="mt-1 whitespace-pre-line break-words text-sm leading-6 text-[var(--dark)]">{value}</p>
                                                                 </div>
+                                                            ))}
+                                                            {application.document_path && (
+                                                                <a href={documentUrl(application)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline">
+                                                                    <FileDown className="h-4 w-4" /> Download supporting document{application.document_name ? ` (${application.document_name})` : ""}
+                                                                </a>
                                                             )}
                                                             <div className="grid gap-3 lg:grid-cols-[200px_1fr]">
                                                                 <div>
@@ -497,6 +552,9 @@ export default function RegistrationsPage() {
                                                 </div>
                                             );
                                         })}
+                                        </div>
+                                        </section>
+                                        ))}
                                     </div>
                                 )}
                             </div>

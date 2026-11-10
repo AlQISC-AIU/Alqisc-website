@@ -3,8 +3,7 @@ import { revalidateTag } from "next/cache";
 import { getFirebaseAdminDb, verifyAdminSession } from "@/lib/firebase/admin";
 import {
     APPLICATIONS_COLLECTION,
-    deleteApplicationPhoto,
-    getActiveRegistrationDepartments,
+    deleteApplicationFile,
     getRegistrationConfig,
     saveRegistrationConfig,
 } from "@/lib/firebase/committee-registration";
@@ -26,14 +25,13 @@ function unauthorized() {
 export async function GET() {
     if (!(await verifyAdminSession())) return unauthorized();
 
-    const [config, departments, snapshot] = await Promise.all([
+    const [config, snapshot] = await Promise.all([
         getRegistrationConfig(),
-        getActiveRegistrationDepartments(),
         getFirebaseAdminDb().collection(APPLICATIONS_COLLECTION).orderBy("created_at", "desc").get(),
     ]);
     const applications = snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as CommitteeApplication);
 
-    return NextResponse.json({ config, departments, applications }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ config, applications }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function PUT(request: Request) {
@@ -88,8 +86,10 @@ export async function DELETE(request: Request) {
     if (!ID_PATTERN.test(id)) return NextResponse.json({ error: "Application not found." }, { status: 404 });
 
     const reference = getFirebaseAdminDb().collection(APPLICATIONS_COLLECTION).doc(id);
-    const photoPath = String((await reference.get()).data()?.photo_path || "");
+    const data = (await reference.get()).data();
     await reference.delete();
-    if (photoPath) await deleteApplicationPhoto(photoPath);
+    for (const path of [data?.photo_path, data?.document_path]) {
+        if (typeof path === "string" && path) await deleteApplicationFile(path);
+    }
     return NextResponse.json({ success: true });
 }
