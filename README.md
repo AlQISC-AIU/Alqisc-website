@@ -46,6 +46,20 @@ npm run deploy:rules:dev   # al-qisc-dev
 npm run deploy:rules:prod  # al-qisc-prod
 ```
 
+### Committee registration form
+
+The form at `/join` follows the committee's official recruitment form. Its questions, options and required/optional rules live in `src/lib/committee-registration.ts`, which the page, the API route (`src/app/api/committee-registration`) and the admin review page all share, so a change there applies everywhere.
+
+Applications are stored by the server in the `committee_applications` Firestore collection, and the optional formal picture and supporting document in the private `committee-applications/` Storage folder. Firestore has no fixed schema, so new questions need no migration; records from the earlier form simply lack the newer answers and the admin page shows what they have.
+
+Admins open and close the form, and set the term, deadline and introduction, under **Committee Registration** in the admin console.
+
+The browser tests in `tests/e2e/join.spec.ts` stub the API, except for one group that submits for real and only runs against the emulators:
+
+```bash
+node scripts/dev-emulators.mjs "npx playwright test tests/e2e/join.spec.ts"
+```
+
 For correct canonical links, social previews, and sitemap URLs, configure:
 
 ```bash

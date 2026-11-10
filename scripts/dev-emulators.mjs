@@ -29,14 +29,20 @@ const env = {
     RESEND_API_KEY: "",
 };
 
+const script = `node scripts/seed-emulators.mjs && ${command}`;
+// On Windows the firebase command is a script that needs a shell, and a shell
+// joins the arguments with spaces, so the script to run must be quoted to
+// arrive as one argument.
+const windows = process.platform === "win32";
+
 const child = spawn(
     "firebase",
     [
         "emulators:exec",
         "--only", "auth,firestore,storage",
         "--project", PROJECT_ID,
-        `node scripts/seed-emulators.mjs && ${command}`,
+        windows ? `"${script}"` : script,
     ],
-    { env, stdio: "inherit", shell: process.platform === "win32" },
+    { env, stdio: "inherit", shell: windows },
 );
 child.on("exit", (code) => process.exit(code ?? 1));

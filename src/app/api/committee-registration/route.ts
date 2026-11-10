@@ -2,150 +2,95 @@ import { NextResponse } from "next/server";
 import { getFirebaseAdminDb } from "@/lib/firebase/admin";
 import {
     APPLICATIONS_COLLECTION,
-    applicationId,
-    filterOpenDepartments,
-    getActiveRegistrationDepartments,
-    getCommitteeMember,
-    getCurrentCommitteeMembers,
+    deleteApplicationFile,
+    getLegacyRegistrationInfo,
     getRegistrationConfig,
+    saveApplicationDocument,
     saveApplicationPhoto,
+    takeUploadedPhoto,
 } from "@/lib/firebase/committee-registration";
+import { checkRegistrationRequest, DUPLICATE_APPLICATION, registrationError } from "@/lib/firebase/registration-request";
 import {
-    detectPhotoType,
+    APPLICATION_FORM_VERSION,
+    detectDocumentType,
     isAcceptingApplications,
-    isDepartmentPosition,
-    isLeadershipPosition,
-    LEADERSHIP_POSITIONS,
-    MAX_PHOTO_BYTES,
-    POSITION_LABELS,
-    validateApplicationInput,
+    isDepartment,
+    MAX_DOCUMENT_BYTES,
+    PHOTO_REQUIRED,
+    positionLabel,
     type PublicRegistrationInfo,
 } from "@/lib/committee-registration";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const attempts = new Map<string, number[]>();
-
-function clientAddress(request: Request): string {
-    return (request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
-}
-
-function isRateLimited(address: string): boolean {
-    const cutoff = Date.now() - 10 * 60 * 1000;
-    const recent = (attempts.get(address) || []).filter((time) => time > cutoff);
-    recent.push(Date.now());
-    attempts.set(address, recent);
-    return recent.length > 5;
-}
+// Reading and re-encoding a 10 MB photo can take a few seconds.
+export const maxDuration = 60;
 
 export async function GET() {
     const config = await getRegistrationConfig();
     const accepting = isAcceptingApplications(config);
-    const leadershipOpen = config.open_positions.some((position) => LEADERSHIP_POSITIONS.includes(position));
-    const [departments, members] = accepting
-        ? await Promise.all([getActiveRegistrationDepartments(), leadershipOpen ? getCurrentCommitteeMembers() : []])
-        : [[], []];
-
+    const legacy = await getLegacyRegistrationInfo(config);
     const info: PublicRegistrationInfo = {
         config: {
             is_open: config.is_open,
             term: config.term,
             deadline: config.deadline,
             intro: config.intro,
-            open_positions: config.open_positions,
-            open_departments: config.open_departments,
+            open_top_positions: config.open_top_positions,
+            open_department_positions: config.open_department_positions,
         },
         accepting,
-        departments: filterOpenDepartments(departments, config),
-        // Only names and roles are exposed; both are already public on the About page.
-        eligible_members: members,
     };
-    return NextResponse.json(info, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+        {
+            ...info,
+            // Kept for anything written against the earlier response.
+            config: { ...info.config, open_positions: legacy.open_positions, open_departments: legacy.open_departments },
+            departments: accepting ? legacy.departments : [],
+            eligible_members: legacy.eligible_members,
+        },
+        { headers: { "Cache-Control": "no-store" } },
+    );
 }
 
 export async function POST(request: Request) {
-    if (isRateLimited(clientAddress(request))) {
-        return NextResponse.json({ error: "Too many submissions. Please wait a few minutes and try again." }, { status: 429 });
-    }
-
     const form = await request.formData().catch(() => null);
-    if (!form || form.get("website")) {
-        return NextResponse.json({ error: "Invalid registration submission." }, { status: 400 });
-    }
+    if (!form) return registrationError("Invalid registration submission.");
 
-    const config = await getRegistrationConfig();
-    if (!isAcceptingApplications(config)) {
-        return NextResponse.json({ error: "Committee registration is currently closed." }, { status: 403 });
-    }
+    const checked = await checkRegistrationRequest(request, [...form.entries()].filter(([, value]) => typeof value === "string"));
+    if (!checked.ok) return checked.response;
+    const { config, application, id } = checked;
 
-    const fields = Object.fromEntries([...form.entries()].filter(([, value]) => typeof value === "string"));
-    const result = validateApplicationInput(fields);
-    if (!result.ok) return NextResponse.json({ error: result.error, errors: result.errors }, { status: 400 });
-    const application = result.value;
+    // The supporting document is optional and small enough to travel with the form.
+    const uploaded = form.get("document");
+    const document = uploaded instanceof File && uploaded.size > 0 ? uploaded : null;
+    if (document && document.size > MAX_DOCUMENT_BYTES) return registrationError("Your supporting document must be 3 MB or smaller.");
+    const documentBytes = document ? Buffer.from(await document.arrayBuffer()) : null;
+    const documentType = documentBytes ? detectDocumentType(documentBytes) : null;
+    if (documentBytes && !documentType) return registrationError("Upload your supporting document as a PDF, JPG, PNG, or WebP file.");
 
-    if (!config.open_positions.includes(application.position)) {
-        return NextResponse.json(
-            { error: `Applications for ${POSITION_LABELS[application.position]} are closed.` },
-            { status: 403 }
-        );
-    }
+    // The photo was uploaded to Storage beforehand; this is the id it was uploaded under.
+    const uploadId = form.get("photo_upload_id");
+    const photo = typeof uploadId === "string" && uploadId ? await takeUploadedPhoto(uploadId, id) : null;
+    if (photo && !photo.ok) return registrationError(photo.error, 400, { code: "photo" });
+    if (!photo && PHOTO_REQUIRED) return registrationError("Upload your formal picture.", 400, { code: "photo" });
 
-    const photo = form.get("photo");
-    if (!(photo instanceof File) || photo.size === 0) {
-        return NextResponse.json({ error: "Upload a photo of yourself." }, { status: 400 });
-    }
-    if (photo.size > MAX_PHOTO_BYTES) {
-        return NextResponse.json({ error: "Your photo must be 4 MB or smaller." }, { status: 400 });
-    }
-    const photoBytes = Buffer.from(await photo.arrayBuffer());
-    const photoType = detectPhotoType(photoBytes);
-    if (!photoType) {
-        return NextResponse.json({ error: "Upload your photo as a JPG, PNG, or WebP image." }, { status: 400 });
-    }
-
-    let currentMember = { name: "", role: "" };
-    let firstChoiceName = "";
-    let secondChoiceName = "";
-
-    if (isLeadershipPosition(application.position)) {
-        const member = await getCommitteeMember(application.current_member_id);
-        if (!member) {
-            return NextResponse.json(
-                { error: "President and Vice President positions are only open to current committee members." },
-                { status: 403 }
-            );
-        }
-        currentMember = member;
-    }
-
-    if (isDepartmentPosition(application.position)) {
-        const departments = filterOpenDepartments(await getActiveRegistrationDepartments(), config);
-        const first = departments.find((department) => department.slug === application.first_choice);
-        const second = departments.find((department) => department.slug === application.second_choice);
-        if (!first) return NextResponse.json({ error: "Select a department that is open for registration." }, { status: 400 });
-        if (application.second_choice && !second) {
-            return NextResponse.json({ error: "Your second choice is not open for registration." }, { status: 400 });
-        }
-        firstChoiceName = first.name;
-        secondChoiceName = second?.name || "";
-    }
-
-    const id = applicationId(config.term, application.student_email);
     const reference = getFirebaseAdminDb().collection(APPLICATIONS_COLLECTION).doc(id);
     const timestamp = new Date().toISOString();
     try {
         // Creating the document first reserves the email for this term, so a
-        // duplicate submission can never overwrite another applicant's photo.
+        // duplicate submission can never overwrite another applicant's files.
         await reference.create({
             ...application,
+            form_version: APPLICATION_FORM_VERSION,
             term: config.term,
-            current_member_name: currentMember.name,
-            current_member_role: currentMember.role,
-            first_choice_name: firstChoiceName,
-            second_choice_name: secondChoiceName,
+            position_type: isDepartment(application.applied_position) ? "department" : "top_committee",
+            position_label: positionLabel(application.applied_position, application.department_position),
             photo_path: "",
-            photo_type: photoType,
+            photo_type: photo ? photo.contentType : "",
+            document_path: "",
+            document_type: documentType || "",
+            document_name: document ? document.name.slice(0, 200) : "",
             status: "pending",
             admin_notes: "",
             created_at: timestamp,
@@ -154,22 +99,34 @@ export async function POST(request: Request) {
     } catch (error) {
         // Firestore ALREADY_EXISTS
         if ((error as { code?: number }).code === 6) {
-            return NextResponse.json(
-                { error: "An application with this student email has already been submitted for this term." },
-                { status: 409 }
-            );
+            await photo?.discard();
+            return registrationError(DUPLICATE_APPLICATION, 409);
         }
         throw error;
     }
 
+    const saved: string[] = [];
     try {
-        const photoPath = await saveApplicationPhoto(id, photoBytes, photoType);
-        await reference.update({ photo_path: photoPath });
+        const update: { photo_path?: string; document_path?: string } = {};
+        if (photo) {
+            update.photo_path = await saveApplicationPhoto(id, photo.bytes, photo.contentType);
+            saved.push(update.photo_path);
+        }
+        if (documentBytes && documentType) {
+            update.document_path = await saveApplicationDocument(id, documentBytes, documentType);
+            saved.push(update.document_path);
+        }
+        if (saved.length > 0) await reference.update(update);
     } catch (error) {
-        console.error("Committee application photo upload failed", error);
+        // Nothing is kept from a half-saved application, so the applicant can
+        // retry. Their uploaded photo is left in place for that retry.
+        console.error("Committee application file upload failed", error);
+        await Promise.all(saved.map((path) => deleteApplicationFile(path).catch(() => undefined)));
         await reference.delete().catch(() => undefined);
-        return NextResponse.json({ error: "Your photo could not be uploaded. Please try again." }, { status: 502 });
+        return registrationError("Your files could not be saved. Please try again.", 502);
     }
 
+    // The application now holds its own copy of the photo.
+    await photo?.discard();
     return NextResponse.json({ success: true }, { status: 201 });
 }

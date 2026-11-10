@@ -24,6 +24,27 @@ service firebase.storage {
       allow write: if false;
     }
 
+    // Formal pictures for committee applications, uploaded by the applicant's
+    // browser because they can be larger than the website's server accepts.
+    // The server checks the application first and writes a ticket to Firestore
+    // (committee_upload_tickets, which browsers cannot read or write). A
+    // browser may then create exactly the file that ticket describes, once.
+    // Nobody can read, replace or delete an upload from a browser; the server
+    // moves it into the private committee-applications/ folder on submission.
+    function uploadTicket(ticketId) {
+      return firestore.get(/databases/(default)/documents/committee_upload_tickets/$(ticketId));
+    }
+
+    match /committee-application-uploads/{ticketId}/photo {
+      allow create: if request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
+        && firestore.exists(/databases/(default)/documents/committee_upload_tickets/$(ticketId))
+        && uploadTicket(ticketId).data.expires_at > request.time
+        && uploadTicket(ticketId).data.size == request.resource.size
+        && uploadTicket(ticketId).data.content_type == request.resource.contentType;
+      allow read, update, delete: if false;
+    }
+
     // Everything else, including private committee applicant photos.
     match /{allPaths=**} {
       allow read, write: if false;

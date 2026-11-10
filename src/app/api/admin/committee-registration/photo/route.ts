@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminDb, verifyAdminSession } from "@/lib/firebase/admin";
-import { APPLICATIONS_COLLECTION, readApplicationPhoto } from "@/lib/firebase/committee-registration";
+import { APPLICATIONS_COLLECTION, readApplicationFile } from "@/lib/firebase/committee-registration";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     const data = (await getFirebaseAdminDb().collection(APPLICATIONS_COLLECTION).doc(id).get()).data();
     const path = String(data?.photo_path || "");
-    const contents = path ? await readApplicationPhoto(path).catch(() => null) : null;
+    const contents = path ? await readApplicationFile(path).catch(() => null) : null;
     if (!contents) return NextResponse.json({ error: "Photo not found." }, { status: 404 });
 
     const name = String(data?.full_name || "applicant").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "applicant";

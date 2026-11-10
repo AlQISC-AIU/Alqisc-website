@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Join the Committee",
-  description: "Apply to join the AL-QISC committee at Albukhary International University and choose the department you would like to serve in.",
+  description: "Apply to join the AL-QISC committee at Albukhary International University. See the positions open for the new term and send your application online.",
   alternates: { canonical: "/join" },
 };
 

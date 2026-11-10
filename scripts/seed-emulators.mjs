@@ -27,6 +27,9 @@ const set = (path, data) => batch.set(db.doc(path), data);
 
 set("site_settings/hero_title", { key: "hero_title", value: "AL-QISC (local emulator)", updated_at: now });
 set("site_settings/contact_email", { key: "contact_email", value: "club@alqisc.test", updated_at: now });
+// Committee registration is open locally so the form at /join can be tried out.
+set("committee_registration_config/current", { is_open: true, term: "2026/27", deadline: "", intro: "", updated_at: now });
+set("site_settings/committee_registration_open", { key: "committee_registration_open", value: "true", updated_at: now });
 set("departments/exco", {
     slug: "exco", name: "EXCO", full_name: "Executive Committee", description: "Sample department.",
     image_url: "", objectives: [], responsibilities: [], is_active: true, display_order: 0,
