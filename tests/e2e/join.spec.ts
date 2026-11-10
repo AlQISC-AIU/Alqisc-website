@@ -258,7 +258,8 @@ test.describe("the form (registration API stubbed)", () => {
         await page.keyboard.type("aisha rahman");
         await expect(name).toHaveCSS("text-transform", "uppercase");
         // Go back to the start and insert there; the text must land where the cursor is.
-        await page.keyboard.press("Home");
+        // Home does not move the cursor in Chrome on macOS.
+        await page.keyboard.press(process.platform === "darwin" ? "Meta+ArrowLeft" : "Home");
         await page.keyboard.type("nur ");
         await expect(name).toHaveValue("nur aisha rahman");
         for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
@@ -846,12 +847,27 @@ test.describe("real submissions (Firebase emulators only)", () => {
             data: { ...fields, photo_size: photo.size, photo_type: photo.type },
         });
 
-    /** Uploads a file the way a browser does: straight to Storage, signed in as nobody. */
-    const uploadToStorage = (request: APIRequestContext, path: string, contentType: string, buffer: Buffer) =>
-        request.post(`http://${storageHost}/v0/b/${bucketName}/o?name=${encodeURIComponent(path)}`, {
-            headers: { "Content-Type": contentType },
-            data: buffer,
-        });
+    /**
+     * Uploads a file the way a browser does: straight to Storage, signed in as
+     * nobody, with the same Firebase call the form makes. (A hand-built request
+     * is refused by some emulator versions even when the rules allow it.)
+     */
+    const uploadToStorage = async (_request: APIRequestContext, path: string, contentType: string, buffer: Buffer) => {
+        const { getApps: getClientApps, initializeApp: initializeClientApp } = await import("firebase/app");
+        const { connectStorageEmulator, getStorage: getClientStorage, ref, uploadBytesResumable } = await import("firebase/storage");
+        const app = getClientApps().find((item) => item.name === "browser")
+            || initializeClientApp({ apiKey: "demo", projectId, storageBucket: bucketName, appId: "1:0:web:0" }, "browser");
+        const storage = getClientStorage(app);
+        const [host, port] = storageHost.split(":");
+        try { connectStorageEmulator(storage, host, Number(port)); } catch { /* already connected */ }
+        try {
+            await new Promise<void>((resolve, reject) => uploadBytesResumable(ref(storage, path), new Uint8Array(buffer), { contentType })
+                .on("state_changed", null, reject, () => resolve()));
+            return { status: () => 200 };
+        } catch (error) {
+            return { status: () => ((error as { code?: string }).code === "storage/unauthorized" ? 403 : 500) };
+        }
+    };
 
     const stored = async (email: string) =>
         (await db().collection("committee_applications").where("student_email", "==", email).get()).docs;
