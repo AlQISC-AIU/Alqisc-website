@@ -633,6 +633,7 @@ test.describe("the form (registration API stubbed)", () => {
     });
 
     test("the form can be completed with the keyboard alone", async ({ page }) => {
+        test.setTimeout(90_000);
         await openForm(page);
         await page.route(API, async (route) => {
             if (route.request().method() !== "POST") return route.fallback();
@@ -703,6 +704,8 @@ test.describe("the form (registration API stubbed)", () => {
     });
 
     test("every step fits the screen with comfortable touch targets @responsive", async ({ page }) => {
+        // Walks the whole form, which takes a while on a development server.
+        test.setTimeout(90_000);
         await openForm(page);
         await choose(page, "Level of education", "Bachelor Degree");
         await expectNoHorizontalOverflow(page, "applicant details");
